@@ -6,6 +6,11 @@ import chromadb.utils.embedding_functions as embedding_functions
 import os
 import subprocess
 
+#Copyright (c) <2024>, <Paul Bjerk>
+#All rights reserved.
+
+#This source code is licensed under the BSD-style license found in the
+#LICENSE file in the root directory of this source tree. 
 
 #"note different dimensions of this small model: " embed_model = "nomic-embed-text"
 #embed_model = "snowflake-arctic-embed:335m"
