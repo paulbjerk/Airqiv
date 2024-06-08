@@ -6,6 +6,12 @@ import gc
 import chromadb.utils.embedding_functions as embedding_functions
 from time import process_time
 
+#Copyright (c) <2024>, <Paul Bjerk>
+#All rights reserved.
+
+#This source code is licensed under the BSD-style license found in the
+#LICENSE file in the root directory of this source tree. 
+
 process_start = process_time()
 
 currentingest = "foldertitle"
