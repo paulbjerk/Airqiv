@@ -2,6 +2,14 @@
 
 ## Supported Versions
 
+This software is a very simple, but very unsecure app.
+It has no known dangers in its current form, but use it at your own risk.
+It can run on a local user on an Apple Macintosh computer
+It does not need admin access. Ollama and ChromaDB are installed locally.
+No other dependencies or access is needed. 
+For security, do not grant admin access to anything downloaded from this repo.
+You can install Ollama from ollama.com for universal access on your computer.
+
 Use this section to tell people about which versions of your project are
 currently being supported with security updates.
 
