@@ -1,10 +1,10 @@
 # AI-Assistant
 This is a Retrieval Augmented Generation (RAG) process for Apple M-series Mac computers. It uses Ollama and ChromaDB, and is written in Python.
-To use you can dowload the setup.py, ingest.py, and asst.py files, and the NARA-RG59-67-69-Box2513.csv file as a model for ingest. This CSV file contains the text extracted via an OCR process from photos of documents at the US National Archive (NARA II) in College Park, MD. 
+To use you can dowload the three python files, and the CSV file as a model for ingest. This CSV file contains the text extracted via an OCR process from photos of documents at the US National Archive (NARA II) in College Park, MD. 
 
 To use: This only works on an M-series Apple Macintosh computer (2020 or later). 
 
-1. Create a folder called ai-assistant in your main user folder and put these four files in it. 
+1. Create a folder called ai-assistant in your main user folder and then download and move these four files into it: 1) setup.py 2) ingest.py 3) asst.py 4) NARA-RG59-67-69-Box2513.csv
 2. Download Ollama from ollama.com and put it in your Applications folder (you’ll need an admin password for this…I’m not sure that’s altogether necessary as the setup file also installs Ollama I think just in the user’s applications…but either way, you need Ollama to run this)
 3. Open the Terminal application (from the Utilities folder in your Applications folder)
 4. Type - cd ai-assistant
