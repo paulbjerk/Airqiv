@@ -13,6 +13,8 @@ You can install Ollama from ollama.com for universal access on your computer.
 Use this section to tell people about which versions of your project are
 currently being supported with security updates.
 
+The chart below is just Github model. It does not refer to this repo.
+
 | Version | Supported          |
 | ------- | ------------------ |
 | 5.1.x   | :white_check_mark: |
@@ -23,6 +25,11 @@ currently being supported with security updates.
 ## Reporting a Vulnerability
 
 Use this section to tell people how to report a vulnerability.
+
+If you see a vulnerability just post a note in the discussion. 
+I will probably ignore all pull requests. 
+I will make changes to this code from time to time.
+The code is mainly meant to be informational, not operational.
 
 Tell them where to go, how often they can expect to get an update on a
 reported vulnerability, what to expect if the vulnerability is accepted or
