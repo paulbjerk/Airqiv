@@ -39,6 +39,8 @@ def add_new_documents(file_path, collection):
     fieldnames = ["FOLDERNAME", "LANGUAGE", "PHOTONAME", "UNIQUEPHOTO", "PHOTOTEXT", "NAMESMENTIONED","COUNTRIESMENTIONED","INSTRUCTION","CONTEXT","RESPONSE",]
     with open(file_path, mode="r") as old_file, open(str("all-"+collection+"-documents.csv"), mode="a") as new_file:
         current = csv.DictReader(old_file, fieldnames=fieldnames)
+        #this next step skips adding the header, presuming the header already exists
+        #but we need an if statement to add a header if it does not exist, i.e. if the csv was not pre-created in the setup 
         next(current, None)
         all_files = csv.DictWriter(new_file, fieldnames=fieldnames)
         for row in current:
