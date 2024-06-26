@@ -13,7 +13,7 @@ inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
 inference_model_short = "phi3"
 userresponse = ""
 
-print("This setup process will take 10-15 minutes. You will need a 2020 or later Apple Mac with an M-Series chip. \nIt will install all the needed pieces (dependencies) for running the two apps.\n Before running this, you must first install Ollama from https://ollama.com \n ")
+print("This setup process will take 5-10 minutes. You will need a 2020 or later Apple Mac with an M-Series chip. \nIt will install all the needed pieces (dependencies) for running the two apps.\n Before running this, you must first install Ollama from https://ollama.com \n ")
 print("This will install ChromaDB first, and then install two AI language models from Ollama.\n"
       "First install Ollama and move the ai-assistant folder into your main user folder, \nthen run this set up app in the Mac Terminal by typing:\n cd ai-assistant \n python3 setup.py \n ")
 
