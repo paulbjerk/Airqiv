@@ -41,28 +41,32 @@ user_term_1 = ""
 sentencesneeded = "3"
 general_prompt = "What is the main theme in these documents?"
 
+# a higher context limiter number makes it more likely that the retrieved documents will be chunked and ranked rather than fed in their entirety into the LLM context.
+# the context limiter is a divisor to test the number of retrieved documents against the maximium context length of the LLM
+context_limiter = 3
+
 
 
 ollama_models = os.popen("ollama list").read()
 
 if "phi3-2k" in ollama_models:
-    inference_model = "phi3-2k"
+    inference_model = "phi3-2k:latest"
     inference_model_window = "2k tokens"
     ranked_results = 20
 elif "phi3-4k" in ollama_models:
-    inference_model = "phi3-4k"
+    inference_model = "phi3-4k:latest"
     inference_model_window = "4k tokens"
     ranked_results = 40
 elif "phi3-8k" in ollama_models:
-    inference_model = "phi3-8k"
+    inference_model = "phi3-8k:latest"
     inference_model_window = "8k tokens"
     ranked_results = 80
 elif "phi3-12k" in ollama_models:
-    inference_model = "phi3-12k"
+    inference_model = "phi3-12k:latest"
     inference_model_window = "12k tokens"
     ranked_results = 120
 elif "phi3-16k" in ollama_models:
-    inference_model = "phi3-16k"
+    inference_model = "phi3-16k:latest"
     inference_model_window = "16k tokens"
     ranked_results = 160
 else:
@@ -70,11 +74,11 @@ else:
     inference_model_window = "2k tokens"
     ranked_results = 20
 
-#model_file = os.system("ollama show --modelfile ")
-#print(model_file)
 
 print("The " +embed_model+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
 print ("The "+inference_model_short+" has a context window length of "+inference_model_window+".\n")
+#os.system("ollama show --modelfile "+inference_model)
+#print("The modelfile information above shows the parameters of the LLM model.\n")
 
 #This establishes an Ollama embedding model for Chromadb processes
 ollama_ef = embedding_functions.OllamaEmbeddingFunction(
@@ -106,7 +110,7 @@ def first_query():
 def topic_query():
     user_question_1 = input("What else do you want to ask about this topic? ")
     sentencesneeded = input("How many sentences do you want in the answer (1-9)? ")
-    prompt = f"Please revisit the full set of relevant documents. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. These are documents about Africa based on diplomatic reporting. Some documents have header material that can be ignored.\n Using the context of the full set of given documents. Answer this new question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    prompt = f"Please revisit the full set of relevant documents. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. These are documents about Africa based on diplomatic reporting. Some documents have header material that can be ignored.\n Using the context of the full set of given documents. Answer this new question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences, sentences."
     return prompt
 
 #list metadatas compiles a list (without duplicates) of all uniquephoto identifiers of documents found in previous steps
@@ -268,11 +272,27 @@ while userresponse != "q":
     user_clear = input("Would you like to clear the context window? ")
     if user_clear == "y":
         print("Wait a moment, and when you see the >>> prompt, type: "+clear_context+"\n When the >>> appears again, type: " +end_subprocess+ "\n Typing these two entries will clear the context window of the LLM")
-        os.system("cd")
+        #os.system("cd")
         os.system("ollama run " + inference_model)
     conv_context = "response"
     general_prompt = input("What is the general topic you want to know about? ")
-    user_term_1 = input("Please provide ONE specific term (name, organization event) relevant to your question: ")
+    user_term_1 = input("Please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Enter a one-word search term here: ")
+    if user_term_1 =="":
+        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+    elif user_term_1 == "NONE":
+        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+    elif user_term_1 == " ":
+        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+    elif user_term_1 == "none":
+        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+    elif user_term_1 == "None":
+        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+    elif user_term_1 == "n":
+        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+    else:
+        user_term_1 = user_term_1
+
+
 
     #embed the query and find matching chunks
     query_embeddings = ollama_ef(general_prompt)
@@ -327,7 +347,7 @@ while userresponse != "q":
     conv_context = "response"
     prompt = first_query()
 
-    if number_retrieved > ranked_results/3:
+    if number_retrieved > ranked_results/context_limiter:
         query_documents = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results)
     else:
         query_documents = all_query_documents
@@ -358,7 +378,7 @@ while userresponse != "q":
         print(folder_docs)
         print("See contents of folder above. There are " + str(folder_length) + " pages in this folder.\n")
         conv_continue = input("\nWould you like to ask questions about the contents of this folder? y/n: ")
-        if folder_length > ranked_results / 3:
+        if folder_length > ranked_results / context_limiter:
             folder_docs = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results)
         else:
             folder_docs = folder_docs
@@ -368,11 +388,11 @@ while userresponse != "q":
 
     #print(conv_continue)
 
-    #userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
-    #if userresponse == "q":
-        #exit()
-    #else:
-        #print("Let's continue.")
+    userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
+    if userresponse == "q":
+        exit()
+    else:
+        print("Let's continue.")
 
     while conv_continue == "y":
         gc.collect()
@@ -414,7 +434,7 @@ while userresponse != "q":
             print(folder_docs)
             print("See contents of folder above. There are " + str(folder_length) + " pages in this folder.\n")
             conv_continue = input("\nWould you like to ask questions about the contents of this folder? y/n: ")
-            if folder_length > ranked_results / 3:
+            if folder_length > ranked_results / context_limiter:
                 folder_docs = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results)
             else:
                 folder_docs = folder_docs
@@ -431,21 +451,3 @@ while userresponse != "q":
 print("Thank you. I hope you found what you were looking for!")
 gc.collect()
 exit()
-
-#https://docs.trychroma.com/guides
-#collection.peek() # returns a list of the first 10 items in the collection
-#collection.count() # returns the number of items in the collection
-#collection.modify(name="new_name") # Rename the collection
-
-#os.system("cd")
-#os.system("cd ai-assistant")
-#read https://medium.com/@generative.ai/12-rag-pain-points-and-proposed-solutions-31280460b81c
-#read https://tech-depth-and-breadth.medium.com/my-notes-from-deeplearning-ais-course-on-advanced-retrieval-for-ai-with-chroma-2dbe24cc1c91
-#read https://www.deeplearning.ai/short-courses/advanced-retrieval-for-ai/
-# read https://ibm.github.io/ibm-generative-ai/v2.3.0/rst_source/examples.text.experimental.rerank.html
-# see https://github.com/IBM/ibm-generative-ai
-
-#an option for re-ranking: https://cookbook.chromadb.dev/embeddings/cross-encoders/
-
-# https://www.squash.io/processing-csv-files-in-python/
-# https://teamtreehouse.com/community/how-to-filter-csv-rows-by-keywords-from-another-csv-file
