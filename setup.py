@@ -28,9 +28,10 @@ mac_model = input ("What chip does your Mac have? Type M1 or M2, or M3: ")
 ram_memory_input = input ("How many GB of RAM memory does your Mac have? (type a number): ")
 ram_memory = int(ram_memory_input)
 
+
 archive_collection = input("What is the broadest one-word category for these documents? (e.g. the archive abbreviation, or collection name): ")
 topic_collection = input("If this is a large collection, what is the sub-set of these documents (e.g. the relevant country, theme, topic, individual, case): ")
-
+print("You should place the CSVs in nested folders in the ai-assistant folder, the nested folders should follow the one-word broad category and sub-set names entered above")
 
 #install chromadb and the underlying chat model (LLM: phi3)
 print("Make sure the above information was entered correctly. \nThis next step will run automatically and take a 5-10 minutes depending on system and internet speed")
