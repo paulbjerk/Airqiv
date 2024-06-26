@@ -1,6 +1,6 @@
 # AI-Assistant
 This is a Retrieval Augmented Generation (RAG) process for Apple M-series Mac computers. It uses Ollama and ChromaDB, and is written in Python.
-To use you can dowload the three python files, and the CSV file as a model for ingest. This CSV file contains the text extracted via an OCR process from photos of documents at the US National Archive (NARA II) in College Park, MD. Photos of the first full document (4 photos which are the first four entries in the spreadsheet) are also included here.
+To use you can dowload the three python files, and the CSV file as a model for ingest. This CSV file contains the text extracted via an OCR process from photos of documents at the US National Archive (NARA II) in College Park, MD. Photos of the first full document (four photos which are the first four entries in the spreadsheet) are also included here.
 
 To use: This only works on an M-series Apple Macintosh computer (2020 or later). 
 
