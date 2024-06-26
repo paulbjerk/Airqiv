@@ -277,18 +277,19 @@ while userresponse != "q":
     conv_context = "response"
     general_prompt = input("What is the general topic you want to know about? ")
     user_term_1 = input("Please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Enter a one-word search term here: ")
+    # these serve as error handling, so that if someone doesn't have a specific search term it doesn't return an error or a huge number of irrelevant documents
     if user_term_1 =="":
-        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+        user_term_1 = "asdfkjaosidfjap"
     elif user_term_1 == "NONE":
-        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+        user_term_1 = "asdfkjaosidfjap"
     elif user_term_1 == " ":
-        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+        user_term_1 = "asdfkjaosidfjap"
     elif user_term_1 == "none":
-        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+        user_term_1 = "asdfkjaosidfjap"
     elif user_term_1 == "None":
-        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+        user_term_1 = "asdfkjaosidfjap"
     elif user_term_1 == "n":
-        user_term_1 = "asdfkjaosidfjapoidjfpoaisdfoap293u4opinaspdio"
+        user_term_1 = "asdfkjaosidfjap"
     else:
         user_term_1 = user_term_1
 
