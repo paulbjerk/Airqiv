@@ -15,6 +15,7 @@ To use: This only works on an M-series Apple Macintosh computer (2020 or later).
 9. In terminal type - python3 ingest.py
 10. When prompted to enter archive name and topical collection, type - nara - for the archive and - tanzania - for the topical collection
 11. Ingest the CSV file in the folder by copying and pasting just the file name (i.e. enter only NARA-RG59-67-69-Box2513 ...without the .csv suffix)
-9 then in Terminal type - python3 asst.py and explore the documents by typing in -   all-nara-documents
-12. Follow the prompts in the asst app. They mostly work, but there are bound to be errors. Let me know if you encounter errors
+12. In Terminal type - python3 asst.py
+13. Explore the documents by typing in -   all-nara-documents
+14. Follow the prompts in the asst app. They mostly work, but there are bound to be errors. Let me know if you encounter errors
 
