@@ -46,7 +46,7 @@ general_prompt = "What is the main theme in these documents?"
 context_limiter = 3
 
 
-
+# This step looks at the phi3 model installed in setup and sets a few parameters in the asst app to best use the user's system capabilities (RAM)
 ollama_models = os.popen("ollama list").read()
 
 if "phi3-2k" in ollama_models:
