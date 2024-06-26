@@ -374,7 +374,7 @@ while userresponse != "q":
         desired_folder = str(input("Copy the folder name here: \n (i.e. paste the preliminary part of the document name, prior to the final -IMG_ suffix)"))
         folder_contents.append(desired_folder)
         folder_docs = get_folder(folder_contents)
-        folder_length = len(folder_docs)/2
+        folder_length = len(folder_docs)
         print(folder_docs)
         print("See contents of folder above. There are " + str(folder_length) + " pages in this folder.\n")
         conv_continue = input("\nWould you like to ask questions about the contents of this folder? y/n: ")
