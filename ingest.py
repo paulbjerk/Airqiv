@@ -3,6 +3,7 @@ import chromadb
 import csv
 import gc
 import chromadb.utils.embedding_functions as embedding_functions
+import os
 
 print("\nCopyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
@@ -26,57 +27,15 @@ clean_list =[]
 doc_chunks = []
 chunk_length = 500
 
-
-# this instantiates the chromadb database
-client = chromadb.PersistentClient(path="chromadb/phototextvectors")
-
 # this establishes the chosen ollama embedding model
 ollama_ef = embedding_functions.OllamaEmbeddingFunction(
     url="http://localhost:11434/api/embeddings",
     model_name=embed_model,
 )
 
-print("This ingest process is slow if you have a lot of documents. It  turns them into machine-readable vectors.")
-print("The " +embed_model+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
-
-#these prompt the user to designate a CSV to process
-currentingest = input("What CSV file do you want to ingest? \n Enter the filename only, without the .csv suffix. It's best to copy-paste to avoid typos: ")
-archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name or research project: ")
-topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
-file_path = currentingest+".csv"
-print("\nIs  the above information correct? If not you can quit and start over.\n")
-
-userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
-if userresponse == "q":
-    exit()
-else:
-    print("Let's continue.\n")
-
-#this step exits program if collection has already been ingested, or prompts a user to re-ingest it
-if currentingest in [c.name for c in client.list_collections()]:
-  print("This collection has already been ingested!")
-  reingest = input("Do you want to re-ingest this collection? type y/n: ")
-  if reingest == "n":
-    collection = client.get_collection(name=currentingest)
-    print(collection.peek())
-    right_docs = input("Does the above preview of the first ten records look like the right collection? ")
-    reingest = input("Do you want to re-ingest this collection? type y/n: ")
-    #add_new_documents()
-    print("Now type - python3 asst.py - and designate - " + currentingest +" - as the collection you want to query.")
-    exit()
-  else:
-    collection = client.get_collection(name=currentingest)
-    client.delete_collection(name=currentingest)
-    collection = client.create_collection(name=currentingest, metadata={"hnsw:space": hnsw_space})
-    #all_documents = get_documents(documents)
-    print("You'll see a message when the ingest is done. But it may take a while.\n Leave the Terminal window open.")
-else:
-  print("You'll see a message when the ingest is done. But it may take a while.\n Leave the Terminal window open.")
-  collection = client.create_collection(name=currentingest, metadata={"hnsw:space": hnsw_space})
-
 
 # add new documents adds raw documents to a collection and returns a new CSV
-def add_new_documents(collection):
+def add_new_documents(file_path, collection):
     fieldnames = ["FOLDERNAME", "LANGUAGE", "PHOTONAME", "UNIQUEPHOTO", "PHOTOTEXT", "NAMESMENTIONED","COUNTRIESMENTIONED","INSTRUCTION","CONTEXT","RESPONSE",]
     with open(file_path, mode="r") as old_file, open(str("all-"+collection+"-documents.csv"), mode="a") as new_file:
         current = csv.DictReader(old_file, fieldnames=fieldnames)
@@ -102,26 +61,29 @@ def chunker (s, n):
 
 #in get documents the CSV is called, and each row of data is chunked and labeled with ids
 def get_documents(file_path):
-  with (open(file_path, newline="") as csv_file):
-    data = csv.DictReader(csv_file)
-    documents = []
-    for row in data:
-        uniquephoto = row["UNIQUEPHOTO"]
-        foldername = row["FOLDERNAME"]
-        metadata = {"FOLDERNAME" : foldername, "UNIQUEPHOTO" : uniquephoto}
-        phototext = row["PHOTOTEXT"]
-        doc_chunks = []
-        for chunk in chunker(phototext, chunk_length):
-            doc_chunks.append(chunk)
-            documents.append(chunk)
-            metadatas.append(metadata)
-        for item in doc_chunks:
-            id_item = uniquephoto
-            id_index = doc_chunks.index(item) + 1
-            id_suffix = str(id_index)
-            id = id_item + "-part-" + id_suffix
-            ids.append(id)
-    return documents
+    with (open(file_path, mode="r") as csv_file):
+        data = csv.DictReader(csv_file)
+        documents = []
+        metadatas =[]
+        ids = []
+        for row in data:
+            uniquephoto = row["UNIQUEPHOTO"]
+            foldername = row["FOLDERNAME"]
+            metadata = {"FOLDERNAME" : foldername, "UNIQUEPHOTO" : uniquephoto}
+            phototext = row["PHOTOTEXT"]
+            doc_chunks = []
+            for chunk in chunker(phototext, chunk_length):
+                doc_chunks.append(chunk)
+                documents.append(chunk)
+                metadatas.append(metadata)
+            for item in doc_chunks:
+                id_item = uniquephoto
+                id_index = doc_chunks.index(item) + 1
+                id_suffix = str(id_index)
+                id = id_item + "-part-" + id_suffix
+                ids.append(id)
+    return(documents, metadatas, ids)
+
 
 # this can be used to count lines in one of the collection CSV files produced at the end
 def count_lines(collection):
@@ -136,53 +98,115 @@ def count_lines_currentingest(file_path):
         num_docs_str = str(num_docs)
         print("There are "+num_docs_str+" documents in this ingest folder.\n")
 
-count_lines_currentingest(file_path)
+def ingest_csv (currentingest, archive_collection, topic_collection):
+    file_path = "./"+archive_collection+"/"+topic_collection+"/"+currentingest+".csv"
+    collection = client.create_collection(name=currentingest, metadata={"hnsw:space": hnsw_space})
 
+    print("We will now ingest "+currentingest)
+    count_lines_currentingest(file_path)
+
+    documents, metadatas, ids = get_documents(file_path)
+    embeddings = ollama_ef(documents)
+    print(embeddings)
+    print(documents)
+
+    #https://docs.trychroma.com/guides
+    #This adds the chunked documents to the chromadb database under the title of the selected currentingest CSV file
+    collection.add(
+        documents=documents,
+        embeddings=embeddings,
+        metadatas=metadatas,
+        ids=ids
+    )
+
+    #these next steps create two parallel sub-collections
+    collection = client.get_or_create_collection(name=str("all-"+topic_collection + "-documents"), metadata={"hnsw:space": hnsw_space})
+
+    collection.upsert(
+        ids=ids,
+        embeddings=embeddings,
+        metadatas=metadatas,
+        documents=documents
+    )
+    add_new_documents(file_path, topic_collection)
+
+    collection = client.get_or_create_collection(name=str("all-"+archive_collection+"-documents"), metadata={"hnsw:space": hnsw_space})
+
+    collection.upsert(
+        ids=ids,
+        embeddings=embeddings,
+        metadatas=metadatas,
+        documents=documents
+    )
+    add_new_documents(file_path, archive_collection)
+
+
+print("This ingest process is slow if you have a lot of documents. It  turns them into machine-readable vectors.")
+print("The " +embed_model+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
+
+user_choice = input("Would you like to ingest a SINGLE CSV file or a whole FOLDER full of files?\n Type: 1 for SINGLE CSV file\n Type 2 for FOLDER of multiple CSV files\n Type 1 or 2 here: ")
+if user_choice == "1":
+    batch_ingest = "file"
+    print("Good. We'll ingest a single CSV file from a single folder of scanned documents.")
+elif user_choice == "2":
+    batch_ingest = "folder"
+    print("Good. We'll ingest a folder filled with multiple CSV files derived from from a multiple folders of scanned documents.")
+else:
+    print("PLease type 1 for a folder of multiple CSV files, or type 2 for a single CSV file.")
+    user_choice = input("Would you like to ingest a SINGLE CSV file or a whole FOLDER full of files?\n Type: 1 for SINGLE CSV file\n Type 2 for FOLDER of multiple CSV files\n Type 1 or 2 here: ")
+
+
+print("\nIs  the above information correct? If not you can quit and start over.\n")
 userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
 if userresponse == "q":
     exit()
 else:
     print("Let's continue.\n")
 
-documents = get_documents(file_path)
-embeddings = ollama_ef(documents)
+# this instantiates the chromadb database
+client = chromadb.PersistentClient(path="chromadb/phototextvectors")
 
-#https://docs.trychroma.com/guides
-#This adds the chunked documents to the chromadb database under the title of the selected currentingest CSV file
-collection.add(
-    documents=documents,
-    embeddings=embeddings,
-    metadatas=metadatas,
-    ids=ids
-)
+if batch_ingest == "file":
+    currentingest = input("What CSV file do you want to ingest? \n Enter the filename only, without the .csv suffix. It's best to copy-paste to avoid typos: ")
+    archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name like nara): ")
+    topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
+    if currentingest in [c.name for c in client.list_collections()]:
+        print("This CSV file has already been ingested!")
+        reingest = input("Do you want to re-ingest this collection? type y/n: ")
+        if reingest == "n":
+            print("Now type - python3 asst.py - and designate - " + currentingest +" - as the collection you want to query.")
+            exit()
+        else:
+            # we need a loop here to delete the relevant rows of the relevant compiled CSVs and replace them with the re-ingested rows
+            client.delete_collection(name=currentingest)
+            print("You'll see a message when the ingest is done. But it may take a while.\n Leave the Terminal window open.")
+    else:
+        print("You'll see a message when the ingest is done. But it may take a while.\n Leave the Terminal window open.")
 
-print(collection.peek())
-print("Ingest is done! See first 10 chunks above.\n")
+    ingest_csv(currentingest, archive_collection, topic_collection)
+    print("\nTo add more documents to this sub-collection and overall collection, \ntype - python3 ingest7.py - again and enter a new csv or folder name.")
+    print( "\nTo explore the newly loaded documents, type - python3 asst.py - \n and designate - " + currentingest + " - \n or - all-"+topic_collection+"-documents, or all-"+archive_collection+"-documents - as the collection you want to query.")
+    gc.collect()
+else:
+    archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name like nara): ")
+    topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
+    ingest_folder = str("./" + archive_collection + "/" + topic_collection)
+    for file in os.listdir(ingest_folder):
+        if file.endswith(".csv"):
+            currentingest, ext = file.split(".")
+            print(currentingest)
+            if currentingest in [c.name for c in client.list_collections()]:
+                #we need a loop here to delete the relevant rows of the relevant compiled CSVs and replace them with the re-ingested rows
+                client.delete_collection(name=currentingest)
+                ingest_csv(currentingest, archive_collection, topic_collection)
+            else:
+                ingest_csv(currentingest, archive_collection, topic_collection)
+    gc.collect()
 
-#these next steps create two parallel sub-collections
-collection = client.get_or_create_collection(name=str("all-"+topic_collection + "-documents"), metadata={"hnsw:space": hnsw_space})
 
-collection.upsert(
-    ids=ids,
-    embeddings=embeddings,
-    metadatas=metadatas,
-    documents=documents
-)
-add_new_documents(topic_collection)
+    print("Ingest is done!\n")
+    print("\nTo add more documents to this sub-collection and overall collection, \ntype - python3 ingest7.py - again and enter a new csv or folder name.")
+    print( "\nTo explore the newly loaded documents, type - python3 asst.py - \n and designate - " + currentingest + " - \n or - all-"+topic_collection+"-documents, or all-"+archive_collection+"-documents - as the collection you want to query.")
 
-collection = client.get_or_create_collection(name=str("all-"+archive_collection+"-documents"), metadata={"hnsw:space": hnsw_space})
-
-collection.upsert(
-    ids=ids,
-    embeddings=embeddings,
-    metadatas=metadatas,
-    documents=documents
-)
-add_new_documents(archive_collection)
-
-print("\nTo add more documents to this sub-collection and overall collection, \ntype - python3 ingest7.py - again and enter a new csv name.")
-print( "\nTo explore the newly loaded documents, type - python3 asst.py - \n and designate - " + currentingest + " - \n or - all-"+topic_collection+"-documents, or all-"+archive_collection+"-documents - as the collection you want to query.")
-gc.collect()
 
 exit()
-
