@@ -133,15 +133,8 @@ def retrieve_documents(query_embeddings, user_term_1):
     retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=10)
     metadata_in_list = retrieved_chunks["metadatas"]
     chunks_metadata_list = metadata_in_list[0]
-    #print("chunks_metadata_list is: ")
-    #print(chunks_metadata_list)
-    #chunks_references = list_metadata(chunks_metadata_list, metadata_key)
-    #print("chunks_references list is: ")
-    #print(chunks_references)
     for item in chunks_metadata_list:
         all_metadatas.append(item)
-    #print("all_metadatas after adding chunks is this: ")
-    #print(all_metadatas)
 
     #second step uses the user_term as a search term to find more matching chunks
     retrieved_documents = collection.get(ids=[], where_document={"$contains":user_term_1})
@@ -150,7 +143,6 @@ def retrieve_documents(query_embeddings, user_term_1):
     for item in retrieved_docs_metadata_list:
         all_metadatas.append(item)
     uniquephotos = list_metadata(all_metadatas, metadata_key)
-    #print(uniquephotos)
     return uniquephotos
 
 
@@ -183,7 +175,6 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
             id_suffix = str(id_index)
             id = id_item + "-chunk-part-" + id_suffix
             retrieved_ids.append(id)
-    #print(retrieved_ids)
     collection = client.create_collection(name="temp_collection", embedding_function=ollama_ef)
     collection.add(
         documents=retrieved_documents,
@@ -197,8 +188,6 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
     chunks_in_list = ranked_chunks["documents"]
     chunks_chunks_list = chunks_in_list[0]
     ranked_docs = []
-    #print(chunks_metadata_list)
-    #print(chunks_chunks_list)
     for i in chunks_metadata_list:
         chunk_index = chunks_metadata_list.index(i)
         chunk_text = chunks_chunks_list[chunk_index]
@@ -362,9 +351,7 @@ while userresponse != "q":
     while view_docs == "y":
         view_doc =[]
         desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQEPHOTO name here, or just enter n to continue: "))
-    #print(desired_doc)
         view_doc.append(desired_doc)
-    #print(view_doc)
         doc_text = get_documents(view_doc)
         print(doc_text)
         view_docs = input("Would you like to view another of the referenced documents? y/n: ")
@@ -387,7 +374,6 @@ while userresponse != "q":
         folder_docs = query_documents
         print("We'll continue asking questions of the originally retrieved documents.")
 
-    #print(conv_continue)
 
     userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
     if userresponse == "q":
@@ -417,9 +403,7 @@ while userresponse != "q":
             view_doc = []
             desired_doc = str(input(
                 "To view the original text of one designated document,\n cut and paste the UNIQEPHOTO name here, or just enter n to continue: "))
-            # print(desired_doc)
             view_doc.append(desired_doc)
-            # print(view_doc)
             doc_text = get_documents(view_doc)
             print(doc_text)
             view_docs = input("Would you like to view another of the referenced documents? y/n: ")
