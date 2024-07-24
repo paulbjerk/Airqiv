@@ -13,7 +13,7 @@ print("\nThis source code is licensed under the BSD2-style license found at http
 
 #general variables
 #embed_model = "snowflake-arctic-embed:335m"
-embed_model = "mxbai-embed-large"
+embed_model = "mxbai-embed-large:latest"
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
 inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
@@ -103,14 +103,14 @@ collection = client.get_collection(name=currentingest, embedding_function=ollama
 def first_query():
     user_question_1 = input("What do you want to know about? ")
     sentencesneeded = input("How many sentences do you want in the answer? ")
-    prompt = f"You are a history professor. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. These are documents about Africa based on diplomatic reporting. Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n Answer the following question by designating one or more UNIQUEPHOTO documents that contain relevant information. Question: " + user_question_1 + "? Specifically, relating to " + user_term_1 + "? Please respond with " + sentencesneeded + " sentences."
+    prompt = f"You are a history professor. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. These are documents based on diplomatic reporting. Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n Answer the following question by designating one or more UNIQUEPHOTO documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
     return prompt
 
 # topic query is used to follow up with the retrieved documents or a user-selected folder of relevant documents
 def topic_query():
     user_question_1 = input("What else do you want to ask about this topic? ")
     sentencesneeded = input("How many sentences do you want in the answer (1-9)? ")
-    prompt = f"Please revisit the full set of relevant documents. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. These are documents about Africa based on diplomatic reporting. Some documents have header material that can be ignored.\n Using the context of the full set of given documents. Answer this new question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences, sentences."
+    prompt = f"Please revisit the full set of relevant documents. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. These are documents based on diplomatic reporting. Some documents have header material that can be ignored.\n Using the context of the full set of given documents. Answer this new question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
     return prompt
 
 #list metadatas compiles a list (without duplicates) of all uniquephoto identifiers of documents found in previous steps
@@ -133,8 +133,15 @@ def retrieve_documents(query_embeddings, user_term_1):
     retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=10)
     metadata_in_list = retrieved_chunks["metadatas"]
     chunks_metadata_list = metadata_in_list[0]
+    #print("chunks_metadata_list is: ")
+    #print(chunks_metadata_list)
+    #chunks_references = list_metadata(chunks_metadata_list, metadata_key)
+    #print("chunks_references list is: ")
+    #print(chunks_references)
     for item in chunks_metadata_list:
         all_metadatas.append(item)
+    #print("all_metadatas after adding chunks is this: ")
+    #print(all_metadatas)
 
     #second step uses the user_term as a search term to find more matching chunks
     retrieved_documents = collection.get(ids=[], where_document={"$contains":user_term_1})
@@ -143,6 +150,7 @@ def retrieve_documents(query_embeddings, user_term_1):
     for item in retrieved_docs_metadata_list:
         all_metadatas.append(item)
     uniquephotos = list_metadata(all_metadatas, metadata_key)
+    #print(uniquephotos)
     return uniquephotos
 
 
@@ -175,6 +183,7 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
             id_suffix = str(id_index)
             id = id_item + "-chunk-part-" + id_suffix
             retrieved_ids.append(id)
+    #print(retrieved_ids)
     collection = client.create_collection(name="temp_collection", embedding_function=ollama_ef)
     collection.add(
         documents=retrieved_documents,
@@ -188,6 +197,8 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
     chunks_in_list = ranked_chunks["documents"]
     chunks_chunks_list = chunks_in_list[0]
     ranked_docs = []
+    #print(chunks_metadata_list)
+    #print(chunks_chunks_list)
     for i in chunks_metadata_list:
         chunk_index = chunks_metadata_list.index(i)
         chunk_text = chunks_chunks_list[chunk_index]
@@ -267,6 +278,7 @@ while userresponse != "q":
     general_prompt = input("What is the general topic you want to know about? ")
     user_term_1 = input("Please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Enter a one-word search term here: ")
     # these serve as error handling, so that if someone doesn't have a specific search term it doesn't return an error or a huge number of irrelevant documents
+
     if user_term_1 =="":
         user_term_1 = "asdfkjaosidfjap"
     elif user_term_1 == "NONE":
@@ -288,6 +300,7 @@ while userresponse != "q":
     query_embeddings = ollama_ef(general_prompt)
     uniquephotos = retrieve_documents(query_embeddings, user_term_1)
     #print(query_embeddings)
+    user_term_1 = ""
 
     #retrieve full document texts from CSV and string them together into a list of strings that can be entered into LLM context window
     all_query_documents = get_documents(uniquephotos)
@@ -313,6 +326,7 @@ while userresponse != "q":
         user_term_1 = input("Please provide ONE specific term (name, organization event) relevant to your question: ")
         query_embeddings = ollama_ef(general_prompt)
         uniquephotos = retrieve_documents(query_embeddings, user_term_1)
+        user_term_1 = ""
         all_query_documents = get_documents(uniquephotos)
         print(uniquephotos)
         number_retrieved = len(uniquephotos)
@@ -330,7 +344,7 @@ while userresponse != "q":
     if userresponse == "q":
         exit()
     else:
-        print("Let's continue.")
+        print("Let's continue.\n")
 
     gc.collect()
 
@@ -347,11 +361,13 @@ while userresponse != "q":
     print(conv_context)
     view_folder = "n"
     view_docs = "n"
-    view_docs = input("Would you like to view any of the referenced documents? y/n: ")
+    view_docs = input("\nWould you like to view any of the referenced documents? y/n: ")
     while view_docs == "y":
         view_doc =[]
         desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQEPHOTO name here, or just enter n to continue: "))
+    #print(desired_doc)
         view_doc.append(desired_doc)
+    #print(view_doc)
         doc_text = get_documents(view_doc)
         print(doc_text)
         view_docs = input("Would you like to view another of the referenced documents? y/n: ")
@@ -374,6 +390,7 @@ while userresponse != "q":
         folder_docs = query_documents
         print("We'll continue asking questions of the originally retrieved documents.")
 
+    #print(conv_continue)
 
     userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
     if userresponse == "q":
@@ -403,7 +420,9 @@ while userresponse != "q":
             view_doc = []
             desired_doc = str(input(
                 "To view the original text of one designated document,\n cut and paste the UNIQEPHOTO name here, or just enter n to continue: "))
+            # print(desired_doc)
             view_doc.append(desired_doc)
+            # print(view_doc)
             doc_text = get_documents(view_doc)
             print(doc_text)
             view_docs = input("Would you like to view another of the referenced documents? y/n: ")
@@ -436,3 +455,4 @@ while userresponse != "q":
 print("Thank you. I hope you found what you were looking for!")
 gc.collect()
 exit()
+
