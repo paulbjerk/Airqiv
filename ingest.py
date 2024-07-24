@@ -1,4 +1,4 @@
-#import ollama
+import ollama
 import chromadb
 import csv
 import gc
@@ -27,12 +27,14 @@ clean_list =[]
 doc_chunks = []
 chunk_length = 500
 
-# this establishes the chosen ollama embedding model
+#This establishes an Ollama embedding model for Chromadb processes
 ollama_ef = embedding_functions.OllamaEmbeddingFunction(
     url="http://localhost:11434/api/embeddings",
     model_name=embed_model,
 )
 
+#this initiates the Chromadb persistent client
+client = chromadb.PersistentClient(path="chromadb/phototextvectors")
 
 # add new documents adds raw documents to a collection and returns a new CSV
 def add_new_documents(file_path, collection):
@@ -52,6 +54,12 @@ def create_csv(collection):
     with open(str("all-"+collection+"-documents.csv"), mode="w") as new_file:
         all_files = csv.DictWriter(new_file, fieldnames=fieldnames)
         all_files.writerow(fieldnames)
+
+def create_folder(archive_collection):
+    os.system("mkdir "+archive_collection)
+
+def create_sub_folder(archive_collection, topic_collection):
+    os.system("mkdir "+archive_collection+"/"+topic_collection)
 
 #this is a very simple chunker s is the text to chunk and n is the number of characters per chunk
 # this could be improved with overlapping chunks and some recursive techniques for better semantic chunks
@@ -157,6 +165,8 @@ else:
     print("PLease type 1 for a folder of multiple CSV files, or type 2 for a single CSV file.")
     user_choice = input("Would you like to ingest a SINGLE CSV file or a whole FOLDER full of files?\n Type: 1 for SINGLE CSV file\n Type 2 for FOLDER of multiple CSV files\n Type 1 or 2 here: ")
 
+archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name like nara): ")
+topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
 
 print("\nIs  the above information correct? If not you can quit and start over.\n")
 userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
@@ -165,13 +175,35 @@ if userresponse == "q":
 else:
     print("Let's continue.\n")
 
+
+
 # this instantiates the chromadb database
-client = chromadb.PersistentClient(path="chromadb/phototextvectors")
+#client = chromadb.PersistentClient(path="chromadb/phototextvectors")
+
+# This step looks at the CSV files created in setup in order to use them or create new ones for the ingest
+#ollama_models = os.popen("ollama list").read()
+configured_collections=os.popen("ls").read()
+
+
+if "all-"+archive_collection+"-documents.csv" in configured_collections:
+    print("We will add the documents in this CSV file to all-"+archive_collection+"-documents")
+else:
+    # this creates a starting point for a new collection CSV
+    print("We will add the documents in this CSV file to all-" + archive_collection + "-documents")
+    create_csv(archive_collection)
+    create_folder(archive_collection)
+
+if "all-" + topic_collection + "-documents.csv" in configured_collections:
+    print("We will add the documents in this CSV file to all-" + topic_collection + "-documents")
+else:
+    # this creates a starting point for a new collection CSV
+    print("We will add the documents in this CSV file to all-" + topic_collection + "-documents")
+    create_csv(topic_collection)
+    create_sub_folder(topic_collection)
+
 
 if batch_ingest == "file":
     currentingest = input("What CSV file do you want to ingest? \n Enter the filename only, without the .csv suffix. It's best to copy-paste to avoid typos: ")
-    archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name like nara): ")
-    topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
     if currentingest in [c.name for c in client.list_collections()]:
         print("This CSV file has already been ingested!")
         reingest = input("Do you want to re-ingest this collection? type y/n: ")
@@ -190,8 +222,6 @@ if batch_ingest == "file":
     print( "\nTo explore the newly loaded documents, type - python3 asst.py - \n and designate - " + currentingest + " - \n or - all-"+topic_collection+"-documents, or all-"+archive_collection+"-documents - as the collection you want to query.")
     gc.collect()
 else:
-    archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name like nara): ")
-    topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
     ingest_folder = str("./" + archive_collection + "/" + topic_collection)
     for file in os.listdir(ingest_folder):
         if file.endswith(".csv"):
