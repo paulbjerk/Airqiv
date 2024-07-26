@@ -7,7 +7,7 @@ import os
 
 print("\nCopyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
-print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .")
+print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
 
 
 # HNSW space affects the discovery of documents in chromadb
@@ -51,9 +51,9 @@ def add_new_documents(file_path, collection):
 # create CSV creates a CSV with standard column headings
 def create_csv(collection):
     fieldnames = ["FOLDERNAME", "LANGUAGE", "PHOTONAME", "UNIQUEPHOTO", "PHOTOTEXT", "NAMESMENTIONED","COUNTRIESMENTIONED","INSTRUCTION","CONTEXT","RESPONSE",]
-    with open(str("all-"+collection+"-documents.csv"), mode="w") as new_file:
+    with open(str("all-"+collection+"-documents.csv"), mode="w", newline="") as new_file:
         all_files = csv.DictWriter(new_file, fieldnames=fieldnames)
-        all_files.writerow(fieldnames)
+        all_files.writeheader()
 
 def create_folder(archive_collection):
     os.system("mkdir "+archive_collection)
@@ -199,11 +199,13 @@ else:
     # this creates a starting point for a new collection CSV
     print("We will add the documents in this CSV file to all-" + topic_collection + "-documents")
     create_csv(topic_collection)
-    create_sub_folder(topic_collection)
+    create_sub_folder(archive_collection, topic_collection)
 
 
 if batch_ingest == "file":
     currentingest = input("What CSV file do you want to ingest? \n Enter the filename only, without the .csv suffix. It's best to copy-paste to avoid typos: ")
+    #we need to move the CSV from Pictures folder to the topic ingest subfolder
+    os.system("mv ~/Pictures/"+currentingest+".csv ~/ai-assistant/"+archive_collection+"/"+topic_collection+"/"+currentingest+".csv")
     if currentingest in [c.name for c in client.list_collections()]:
         print("This CSV file has already been ingested!")
         reingest = input("Do you want to re-ingest this collection? type y/n: ")
@@ -223,6 +225,7 @@ if batch_ingest == "file":
     gc.collect()
 else:
     ingest_folder = str("./" + archive_collection + "/" + topic_collection)
+    #we need to move all csv files from pictures that have the archive collection in the first position of filename to the topic collection sub-folder
     for file in os.listdir(ingest_folder):
         if file.endswith(".csv"):
             currentingest, ext = file.split(".")
