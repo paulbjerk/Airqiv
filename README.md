@@ -5,8 +5,8 @@ To use you can dowload the three python files, and the CSV file as a model for i
 To use: This only works on an M-series Apple Macintosh computer (2020 or later). 
 
 1. Create a folder called ai-assistant in your main user folder.
-2. Then download and move these four files into it: 1) setup.py 2) ingest.py 3) asst.py 4) NARA-RG59-67-69-Box2513.csv
-3. In a future version I will include an Apple Shortcut that will allow you to OCR your own sets of photos.
+2. Then download and move these four files into it: 1) setup.py 2) ingest.py 3) asst.py 4) delete_collection.py
+3. Put the NARA-RG59-67-69-Box2513.csv in your Pictures folder in your main user folder. In a future version I will include an Apple Shortcut that will allow you to OCR your own sets of photos and it will create CSV files like this one in your Pictures folder. 
 4. Download Ollama from ollama.com and put it in your Applications folder (you’ll need an admin password for this…I’m not sure that’s altogether necessary as the setup file also installs Ollama for the local user. Either way, you need Ollama to run this)
 5. Open the Terminal application (from the Utilities folder in your Applications folder)
 6. Type - cd ai-assistant
