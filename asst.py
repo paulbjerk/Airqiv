@@ -9,7 +9,7 @@ from operator import itemgetter
 
 print("\nCopyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
-print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .")
+print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
 
 #general variables
 #embed_model = "snowflake-arctic-embed:335m"
@@ -17,8 +17,8 @@ embed_model = "mxbai-embed-large:latest"
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
 inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
+inference_model_short, inference_model_detail = inference_model.split(":")
 phi3_model = "2k"
-inference_model_short = "phi3"
 inference_model_window = "2k tokens"
 conv_context = "response"
 prompt = "prompt"
@@ -65,8 +65,8 @@ elif "phi3-12k" in ollama_models:
     inference_model = "phi3-12k:latest"
     inference_model_window = "12k tokens"
     ranked_results = 120
-elif "phi3-16k" in ollama_models:
-    inference_model = "phi3-16k:latest"
+elif "llama3-16k" in ollama_models:
+    inference_model = "llama3-16k:latest"
     inference_model_window = "16k tokens"
     ranked_results = 160
 else:
@@ -74,9 +74,10 @@ else:
     inference_model_window = "2k tokens"
     ranked_results = 20
 
+inference_model_short, inference_model_latest = inference_model.split(":")
 
-print("The " +embed_model+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
-print ("The "+inference_model_short+" has a context window length of "+inference_model_window+".\n")
+print("\nThe " +embed_model+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
+print ("The "+inference_model_short+" language model has a context window length of "+inference_model_window+".\n")
 #os.system("ollama show --modelfile "+inference_model)
 #print("The modelfile information above shows the parameters of the LLM model.\n")
 
@@ -221,6 +222,19 @@ def get_documents(uniquephotos):
                 query_documents.append(query_document)
     return query_documents
 
+def get_namesmentioned(uniquephotos):
+  with (open(file_path, newline="") as csv_file):
+    data = csv.DictReader(csv_file)
+    names_mentioned = []
+    for row in data:
+        uniquephoto = row["UNIQUEPHOTO"]
+        #phototext = row["PHOTOTEXT"]
+        names = row["NAMESMENTIONED"]
+        for item in uniquephotos:
+            if row["UNIQUEPHOTO"] == item:
+                name_mentioned = str(uniquephoto+": "+names)
+                names_mentioned.append(name_mentioned)
+    return names_mentioned
 
 # Ollama's basic query-documents function using selected LLM
 # phi3 chat template: <|user|>\nQuestion<|end|>\n<|assistant|>
@@ -309,6 +323,15 @@ while userresponse != "q":
     number_retrieved = len(uniquephotos)
     print("The " + str(number_retrieved) + " documents listed above have content matching your query.\n If no documents are listed, please enter a different query term below.\n")
 
+    see_names = input("Would you like to see the names associated with these documents? y or n: ")
+    print("\nSee names associated with the retrieved documents with page references (add 1 to get right page number)")
+    if see_names == "y":
+        names_mentioned = get_namesmentioned(uniquephotos)
+        for i in names_mentioned:
+            print(i)
+    else:
+        print("Okay, you can ask for names again later.")
+
     redo_general_prompt = input("Would you like to enter a different query term? Type: y or n: ")
     if redo_general_prompt == "n":
         view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
@@ -331,6 +354,16 @@ while userresponse != "q":
         print(uniquephotos)
         number_retrieved = len(uniquephotos)
         print("The " + str(number_retrieved) + " documents listed above have content matching your query.\n If no documents are listed, please enter a different query term.")
+
+        see_names = input("Would you like to see the names associated with these documents? y or n: ")
+        if see_names == "y":
+            names_mentioned = get_namesmentioned(uniquephotos)
+            print("\nSee names and document IDs with page reference (add 1 to get right page number)")
+            for i in names_mentioned:
+                print(i)
+        else:
+            print("Okay, you can ask for names again later.")
+
         view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
         if view_docs != "n":
             print(all_query_documents)
@@ -364,7 +397,7 @@ while userresponse != "q":
     view_docs = input("\nWould you like to view any of the referenced documents? y/n: ")
     while view_docs == "y":
         view_doc =[]
-        desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQEPHOTO name here, or just enter n to continue: "))
+        desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
     #print(desired_doc)
         view_doc.append(desired_doc)
     #print(view_doc)
@@ -419,7 +452,7 @@ while userresponse != "q":
         while view_docs == "y":
             view_doc = []
             desired_doc = str(input(
-                "To view the original text of one designated document,\n cut and paste the UNIQEPHOTO name here, or just enter n to continue: "))
+                "To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
             # print(desired_doc)
             view_doc.append(desired_doc)
             # print(view_doc)
@@ -455,4 +488,3 @@ while userresponse != "q":
 print("Thank you. I hope you found what you were looking for!")
 gc.collect()
 exit()
-
