@@ -5,6 +5,11 @@ import csv
 import chromadb.utils.embedding_functions as embedding_functions
 from time import process_time
 
+print("\nCopyright (c) <2024>, <Paul Bjerk>")
+print("All rights reserved.")
+print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
+
+
 def delete_documents(collection):
     fieldnames = ["FOLDERNAME", "LANGUAGE", "PHOTONAME", "UNIQUEPHOTO", "PHOTOTEXT", "NAMESMENTIONED","COUNTRIESMENTIONED","INSTRUCTION","CONTEXT","RESPONSE"]
     with open(file_path, mode="r") as old_file, open(str("all-"+collection+"-documents.csv"), mode="a") as new_file:
