@@ -3,9 +3,7 @@ import os
 
 print("\nCopyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
-print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .")
-# https://www.reddit.com/r/LangChain/comments/15a447w/chroma_or_faiss/
-# https://python.langchain.com/v0.2/docs/integrations/vectorstores/chroma/
+print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
 
 embed_model = "mxbai-embed-large"
 embed_model_dimensions = "1024"
@@ -16,7 +14,7 @@ large_inference_model = "llama3:instruct"
 inference_model_short, inference_model_detail = inference_model.split(":")
 userresponse = ""
 
-print("This setup process will take 10-15 minutes. You will need a 2020 or later Apple Mac with an M-Series chip. \nIt will install all the needed pieces (dependencies) for running the two apps.\n Before running this, you must first install Ollama from https://ollama.com \n ")
+print("\nThis setup process will take 10-15 minutes. You will need a 2020 or later Apple Mac with an M-Series chip. \nIt will install all the needed pieces (dependencies) for running the two apps.\n Before running this, you must first install Ollama from https://ollama.com \n ")
 print("This will install ChromaDB first, and then install two AI language models from Ollama.\n"
       "First install Ollama and move the ai-assistant folder into your main user folder, \nthen run this set up app in the Mac Terminal by typing:\n cd ai-assistant \n python3 setup.py \n ")
 
