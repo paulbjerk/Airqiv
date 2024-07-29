@@ -4,10 +4,17 @@ import csv
 import gc
 import chromadb.utils.embedding_functions as embedding_functions
 import os
+import re
+import statistics
+from statistics import mode
 
-print("\nCopyright (c) <2024>, <Paul Bjerk>")
+print("\n   - - The Airqiv Document Explorer  - -       ")
+print("\n          - - www.airqiv.com  - -       ")
+print("\nAI-Assistant Document Explorer")
+print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
 print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
+print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
 
 
 # HNSW space affects the discovery of documents in chromadb
@@ -26,6 +33,11 @@ ids = []
 clean_list =[]
 doc_chunks = []
 chunk_length = 500
+archive_collection = ""
+topic_collection = ""
+user_choice = ""
+batch_ingest = ""
+csv_suffix = ".csv"
 
 #This establishes an Ollama embedding model for Chromadb processes
 ollama_ef = embedding_functions.OllamaEmbeddingFunction(
@@ -68,6 +80,15 @@ def chunker (s, n):
     for start in range(0, len(s), n):
         yield s[start:start+n]
 
+def most_frequent(incoming_string):
+    clean_string = incoming_string.replace(";", ",")
+    countriesmentioned = list(clean_string.split(","))
+    # if countriesmentioned == "":
+    if len(countriesmentioned) < 1:
+        most_common_element = "no__items__mentioned"
+    else:
+        most_common_element = (mode(countriesmentioned))
+    return most_common_element
 
 #in get documents the CSV is called, and each row of data is chunked and labeled with ids
 def get_documents(file_path):
@@ -79,8 +100,12 @@ def get_documents(file_path):
         for row in data:
             uniquephoto = row["UNIQUEPHOTO"]
             foldername = row["FOLDERNAME"]
-            metadata = {"FOLDERNAME" : foldername, "UNIQUEPHOTO" : uniquephoto}
             phototext = row["PHOTOTEXT"]
+            namesmentioned = str(row["NAMESMENTIONED"])
+            countriesmentioned = str(row["COUNTRIESMENTIONED"])
+            country_mentioned = str(most_frequent(countriesmentioned))
+            name_mentioned = str(most_frequent(namesmentioned))
+            metadata = {"FOLDERNAME" : foldername, "UNIQUEPHOTO": uniquephoto, "NAMESMENTIONED": name_mentioned, "COUNTRIESMENTIONED": country_mentioned}
             doc_chunks = []
             for chunk in chunker(phototext, chunk_length):
                 doc_chunks.append(chunk)
@@ -109,7 +134,8 @@ def count_lines_currentingest(file_path):
         print("There are "+num_docs_str+" documents in this ingest folder.\n")
 
 def ingest_csv (currentingest, archive_collection, topic_collection):
-    file_path = "./"+archive_collection+"/"+topic_collection+"/"+currentingest+".csv"
+    file_path = archive_collection+"/"+topic_collection+"/"+currentingest+csv_suffix
+    print("The file_path is: "+file_path)
     collection = client.create_collection(name=currentingest, metadata={"hnsw:space": hnsw_space})
 
     print("We will now ingest "+currentingest)
@@ -117,8 +143,6 @@ def ingest_csv (currentingest, archive_collection, topic_collection):
 
     documents, metadatas, ids = get_documents(file_path)
     embeddings = ollama_ef(documents)
-    print(embeddings)
-    print(documents)
 
     #https://docs.trychroma.com/guides
     #This adds the chunked documents to the chromadb database under the title of the selected currentingest CSV file
@@ -150,31 +174,30 @@ def ingest_csv (currentingest, archive_collection, topic_collection):
     )
     add_new_documents(file_path, archive_collection)
 
+def enter_ingestfile():
+    user_choice = input("\nWould you like to ingest a SINGLE CSV file or a whole FOLDER full of files?\n Type: 1 for SINGLE CSV file\n Type 2 for FOLDER of multiple CSV files\n Type 1 or 2 here: ")
+    if user_choice == "1":
+        batch_ingest = "file"
+        print("Good. We'll ingest a single CSV file from a single folder of scanned documents.")
+    elif user_choice == "2":
+        batch_ingest = "folder"
+        print("Good. We'll ingest a folder filled with multiple CSV files derived from from a multiple folders of scanned documents.")
+    else:
+        print("PLease type 1 for a folder of multiple CSV files, or type 2 for a single CSV file.")
+        user_choice = input("Would you like to ingest a SINGLE CSV file or a whole FOLDER full of files?\n Type: 1 for SINGLE CSV file\n Type 2 for FOLDER of multiple CSV files\n Type 1 or 2 here: ")
 
-print("This ingest process is slow if you have a lot of documents. It  turns them into machine-readable vectors.")
+    archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name like nara): ")
+    topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
+    return batch_ingest, archive_collection, topic_collection
+
+print("\nThis ingest process is slow if you have a lot of documents. It  turns them into machine-readable vectors.\n You should plan on about 150 kilobytes of hard drive storage per page of ingested documents.\n")
 print("The " +embed_model+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
 
-user_choice = input("Would you like to ingest a SINGLE CSV file or a whole FOLDER full of files?\n Type: 1 for SINGLE CSV file\n Type 2 for FOLDER of multiple CSV files\n Type 1 or 2 here: ")
-if user_choice == "1":
-    batch_ingest = "file"
-    print("Good. We'll ingest a single CSV file from a single folder of scanned documents.")
-elif user_choice == "2":
-    batch_ingest = "folder"
-    print("Good. We'll ingest a folder filled with multiple CSV files derived from from a multiple folders of scanned documents.")
-else:
-    print("PLease type 1 for a folder of multiple CSV files, or type 2 for a single CSV file.")
-    user_choice = input("Would you like to ingest a SINGLE CSV file or a whole FOLDER full of files?\n Type: 1 for SINGLE CSV file\n Type 2 for FOLDER of multiple CSV files\n Type 1 or 2 here: ")
+batch_ingest, archive_collection, topic_collection = enter_ingestfile()
 
-archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name like nara): ")
-topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
-
-print("\nIs  the above information correct? If not you can quit and start over.\n")
-userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
-if userresponse == "q":
-    exit()
-else:
-    print("Let's continue.\n")
-
+file_entry = input("\nIs  the above information correct? Type y or n: ")
+while file_entry != "y":
+    batch_ingest, archive_collection, topic_collection = enter_ingestfile()
 
 
 # this instantiates the chromadb database
@@ -204,8 +227,9 @@ else:
 
 if batch_ingest == "file":
     currentingest = input("What CSV file do you want to ingest? \n Enter the filename only, without the .csv suffix. It's best to copy-paste to avoid typos: ")
-    #we need to move the CSV from Pictures folder to the topic ingest subfolder
-    os.system("mv ~/Pictures/"+currentingest+".csv ~/ai-assistant/"+archive_collection+"/"+topic_collection+"/"+currentingest+".csv")
+    #this step moves the CSV from the user's Pictures folder to the topic ingest subfolder
+    ingest_folder = str(archive_collection + "/" + topic_collection)
+    os.system("mv " + currentingest+csv_suffix + " " + ingest_folder + "/" + currentingest+csv_suffix)
     if currentingest in [c.name for c in client.list_collections()]:
         print("This CSV file has already been ingested!")
         reingest = input("Do you want to re-ingest this collection? type y/n: ")
@@ -219,23 +243,33 @@ if batch_ingest == "file":
     else:
         print("You'll see a message when the ingest is done. But it may take a while.\n Leave the Terminal window open.")
 
+
     ingest_csv(currentingest, archive_collection, topic_collection)
     print("\nTo add more documents to this sub-collection and overall collection, \ntype - python3 ingest7.py - again and enter a new csv or folder name.")
     print( "\nTo explore the newly loaded documents, type - python3 asst.py - \n and designate - " + currentingest + " - \n or - all-"+topic_collection+"-documents, or all-"+archive_collection+"-documents - as the collection you want to query.")
     gc.collect()
 else:
-    ingest_folder = str("./" + archive_collection + "/" + topic_collection)
-    #we need to move all csv files from pictures that have the archive collection in the first position of filename to the topic collection sub-folder
-    for file in os.listdir(ingest_folder):
-        if file.endswith(".csv"):
-            currentingest, ext = file.split(".")
-            print(currentingest)
-            if currentingest in [c.name for c in client.list_collections()]:
-                #we need a loop here to delete the relevant rows of the relevant compiled CSVs and replace them with the re-ingested rows
-                client.delete_collection(name=currentingest)
-                ingest_csv(currentingest, archive_collection, topic_collection)
-            else:
-                ingest_csv(currentingest, archive_collection, topic_collection)
+    ingest_folder = str(archive_collection + "/" + topic_collection)
+    #we need to move all csv files from Pictures that have the archive collection in the first position of filename to the topic collection sub-folder
+    folder_content = os.popen("ls").read()
+    #print(folder_content)
+    csvs_to_ingest = re.findall(archive_collection+"_"+topic_collection+"_.*"+csv_suffix, folder_content)
+    print("We will ingest the following CSV files: ")
+    print(csvs_to_ingest)
+    for i in csvs_to_ingest:
+        os.system("mv "+i+" "+ingest_folder+"/"+i)
+        currentingest, ext = i.split(".")
+        #print("currentingest is: " + currentingest)
+        for file in os.listdir(ingest_folder):
+            if file == currentingest+csv_suffix:
+                #currentingest, ext = file.split(".")
+                #print("currentingest is: "+currentingest)
+                if currentingest in [c.name for c in client.list_collections()]:
+                    #we need a loop here to delete the relevant rows of the relevant compiled CSVs and replace them with the re-ingested rows
+                    client.delete_collection(name=currentingest)
+                    ingest_csv(currentingest, archive_collection, topic_collection)
+                else:
+                    ingest_csv(currentingest, archive_collection, topic_collection)
     gc.collect()
 
 
