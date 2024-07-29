@@ -1,9 +1,13 @@
 import csv
 import os
 
-print("\nCopyright (c) <2024>, <Paul Bjerk>")
+print("\n   - - The Airqiv Document Explorer  - -       ")
+print("          - - www.airqiv.com  - -       ")
+print("\nAI-Assistant Document Explorer")
+print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
 print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
+print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
 
 embed_model = "mxbai-embed-large"
 embed_model_dimensions = "1024"
