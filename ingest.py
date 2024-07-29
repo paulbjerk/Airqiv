@@ -9,7 +9,7 @@ import statistics
 from statistics import mode
 
 print("\n   - - The Airqiv Document Explorer  - -       ")
-print("\n          - - www.airqiv.com  - -       ")
+print("          - - www.airqiv.com  - -       ")
 print("\nAI-Assistant Document Explorer")
 print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
