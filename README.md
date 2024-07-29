@@ -11,7 +11,7 @@ To use: This only works on an M-series Apple Macintosh computer (2020 or later).
 5. Open the Terminal application (from the Utilities folder in your Applications folder)
 6. Type - cd ai-assistant
 7. Type - python3 setup.py
-8. Run the set up and then move the NARA-RG59-67-69-Box2513.csv file into the tanzania folder inside the nara folder
+8. Run the set up program. You need to be online for this as it will download chromadb, ollama, and some language models from ollama.
 9. In terminal type - python3 ingest.py
 10. When prompted to enter archive name and topical collection, type - nara - for the archive and - tanzania - for the topical collection
 11. Ingest the CSV file in the folder by copying and pasting just the file name (i.e. enter only NARA-RG59-67-69-Box2513 ...without the .csv suffix)
