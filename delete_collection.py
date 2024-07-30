@@ -5,9 +5,13 @@ import csv
 import chromadb.utils.embedding_functions as embedding_functions
 from time import process_time
 
-print("\nCopyright (c) <2024>, <Paul Bjerk>")
+print("\n   - - The Airqiv Document Explorer  - -       ")
+print("          - - www.airqiv.com  - -       ")
+print("\nAI-Assistant Document Explorer")
+print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
 print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
+print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
 
 
 def delete_documents(collection):
@@ -47,7 +51,7 @@ if user_auth == "y":
     #collection = client.get_collection(name="test") # Get a collection object from an existing collection, by name. Will raise an exception if it's not found.
     #collection = client.get_or_create_collection(name="test") # Get a collection object from an existing collection, by name. If it doesn't exist, create it.
     #collection = client.get_collection(name=currentingest)
-    client.delete_collection(name=currentingest) # Delete a collection and all associated embeddings, documents, and metadata. ⚠️ This is destructive and not reversible
+    #client.delete_collection(name=currentingest) # Delete a collection and all associated embeddings, documents, and metadata. ⚠️ This is destructive and not reversible
     client.delete_collection(name=archive_collection) # Delete a collection and all associated embeddings, documents, and metadata. ⚠️ This is destructive and not reversible
     client.delete_collection(name=topic_collection) # Delete a collection and all associated embeddings, documents, and metadata. ⚠️ This is destructive and not reversible
 
