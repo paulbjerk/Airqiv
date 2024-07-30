@@ -181,6 +181,8 @@ def enter_ingestfile():
     if user_choice == "1":
         batch_ingest = "file"
         print("Good. We'll ingest a single CSV file from a single folder of scanned documents.")
+        currentingest = input("What CSV file do you want to ingest? \n Enter the filename only, without the .csv suffix. It's best to copy-paste to avoid typos: ")
+
     elif user_choice == "2":
         batch_ingest = "folder"
         print("Good. We'll ingest a folder filled with multiple CSV files derived from from a multiple folders of scanned documents.")
@@ -190,16 +192,17 @@ def enter_ingestfile():
 
     archive_collection = input("What one-word name did you give for the overall collection during setup? \n (e.g. archive name like nara): ")
     topic_collection = input("What one-word name did you give for your sub-collection during setup? \n (e.g. a country, an individual, a theme, an archive or sub-section: ")
-    return batch_ingest, archive_collection, topic_collection
+    return batch_ingest, archive_collection, topic_collection, currentingest
 
 print("\nThis ingest process is slow if you have a lot of documents. It  turns them into machine-readable vectors.\n You should plan on about 150 kilobytes of hard drive storage per page of ingested documents.\n")
 print("The " +embed_model+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
 
-batch_ingest, archive_collection, topic_collection = enter_ingestfile()
+batch_ingest, archive_collection, topic_collection, currentingest = enter_ingestfile()
 
-file_entry = input("\nIs  the above information correct? Type y or n: ")
+file_entry = "n"
 while file_entry != "y":
-    batch_ingest, archive_collection, topic_collection = enter_ingestfile()
+    batch_ingest, archive_collection, topic_collection, currentingest = enter_ingestfile()
+    file_entry = input("\nIs  the above information correct? Type y or n: ")
 
 
 # this instantiates the chromadb database
@@ -228,7 +231,6 @@ else:
 
 
 if batch_ingest == "file":
-    currentingest = input("What CSV file do you want to ingest? \n Enter the filename only, without the .csv suffix. It's best to copy-paste to avoid typos: ")
     #this step moves the CSV from the user's Pictures folder to the topic ingest subfolder
     ingest_folder = str(archive_collection + "/" + topic_collection)
     os.system("mv " + currentingest+csv_suffix + " " + ingest_folder + "/" + currentingest+csv_suffix)
