@@ -143,8 +143,8 @@ def ingest_csv (currentingest, archive_collection, topic_collection):
 
     documents, metadatas, ids = get_documents(file_path)
     embeddings = ollama_ef(documents)
-    print(embeddings)
-    print(documents)
+    #print(embeddings)
+    #print(documents)
 
     #https://docs.trychroma.com/guides
     #This adds the chunked documents to the chromadb database under the title of the selected currentingest CSV file
