@@ -8,12 +8,12 @@ import re
 import statistics
 from statistics import mode
 
-print("\n   - - The Airqiv Document Explorer  - -       ")
-print("          - - www.airqiv.com  - -       ")
+print("\n      - - The Airqiv Document Explorer  - -       ")
+print("             - - www.airqiv.com  - -       ")
 print("\nAI-Assistant Document Explorer")
 print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
-print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
+print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .")
 print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
 
 
@@ -143,6 +143,8 @@ def ingest_csv (currentingest, archive_collection, topic_collection):
 
     documents, metadatas, ids = get_documents(file_path)
     embeddings = ollama_ef(documents)
+    print(embeddings)
+    print(documents)
 
     #https://docs.trychroma.com/guides
     #This adds the chunked documents to the chromadb database under the title of the selected currentingest CSV file
