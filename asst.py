@@ -33,12 +33,14 @@ general_prompt = ""
 redo_general_prompt = "n"
 uniquephotos = []
 query_documents = []
+all_query_documents = []
+number_retrieved = 5
 folder_contents = []
 folder_docs =[]
 clear_context = "/clear"
 end_subprocess = "/bye"
 metadata_key = ["UNIQUEPHOTO"]
-query_chunk_length = 300
+query_chunk_length = 100
 currentingest = "foldertitle"
 hnsw_space = "ip"
 prompt = f"You are a history professor. Answer the following question by designating one or more documents that contain relevant information. The documents are identified by a UNIQUEPHOTO: name."
@@ -51,7 +53,7 @@ general_prompt = "What is the main theme in these documents?"
 
 # a higher context limiter number makes it more likely that the retrieved documents will be chunked and ranked rather than fed in their entirety into the LLM context.
 # the context limiter is a divisor to test the number of retrieved documents against the maximium context length of the LLM
-context_limiter = 3
+context_limiter = 5
 
 
 # This step looks at the phi3 model installed in setup and sets a few parameters in the asst app to best use the user's system capabilities (RAM)
@@ -110,14 +112,14 @@ collection = client.get_collection(name=currentingest, embedding_function=ollama
 def first_query():
     user_question_1 = input("AI-Assistant: What do you want to know about? \nUser: ")
     sentencesneeded = input("AI-Assistant: How many sentences do you want in the answer? \nUser: ")
-    prompt = f"You are a history professor. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. These are documents based on diplomatic reporting. Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n Answer the following question by designating one or more UNIQUEPHOTO documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    prompt = f"You are a history professor. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n Answer the following question by designating one or more UNIQUEPHOTO documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
     return prompt
 
 # topic query is used to follow up with the retrieved documents or a user-selected folder of relevant documents
 def topic_query():
     user_question_1 = input("AI-Assistant: What else do you want to ask about this topic? \nUser: ")
     sentencesneeded = input("AI-Assistant: How many sentences do you want in the answer (1-9)? \nUser: ")
-    prompt = f"Please revisit the full set of relevant documents. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. These are documents based on diplomatic reporting. Some documents have header material that can be ignored.\n Using the context of the full set of given documents. Answer this new question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    prompt = f"You are a history professor. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n Answer the following question by designating one or more UNIQUEPHOTO documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
     return prompt
 
 #list metadatas compiles a list (without duplicates) of all uniquephoto identifiers of documents found in previous steps
@@ -139,7 +141,7 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
     all_metadatas = []
     retrieved_chunks =[]
 
-
+    # these serve as error handling, so that if someone doesn't have a specific search term it doesn't return an error or a huge number of irrelevant documents
     if names_wanted =="":
         names_wanted = "no__name__given"
     elif names_wanted == "NONE":
@@ -226,7 +228,7 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
 
 
 #get ranked documents allows users to narrow down a retrived set of documents, to better fit context window low RAM situations
-def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ranked_results):
+def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key):
     client = chromadb.PersistentClient(path="chromadb/phototextvectors")
     if "temp_collection" in [c.name for c in client.list_collections()]:
         client.delete_collection(name="temp_collection")
@@ -237,6 +239,7 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
         retrieved_documents = []
         retrieved_metadatas = []
         retrieved_ids = []
+    #print(query_documents)
     for i in query_documents:
         #for key in i.keys():
         uniquephoto = i["UNIQUEPHOTO"]
@@ -261,24 +264,33 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
         ids=retrieved_ids
     )
     query_embeddings = ollama_ef(general_prompt)
-    ranked_chunks = collection.query(query_embeddings=query_embeddings, n_results=ranked_results)
+    ranked_chunks = collection.query(query_embeddings=query_embeddings, n_results=int(ranked_results/context_limiter))
     metadata_in_list = ranked_chunks["metadatas"]
     chunks_metadata_list = metadata_in_list[0]
-    chunks_in_list = ranked_chunks["documents"]
-    chunks_chunks_list = chunks_in_list[0]
+    all_metadatas = []
     ranked_docs = []
+    for item in chunks_metadata_list:
+        all_metadatas.append(item)
+    uniquephotos = list_metadata(all_metadatas, metadata_key)
+    ranked_docs = get_documents(uniquephotos, file_path)
+    #print(ranked_docs)
+
+    #chunks_in_list = ranked_chunks["documents"]
+    #chunks_chunks_list = chunks_in_list[0]
+
     #print(chunks_metadata_list)
     #print(chunks_chunks_list)
-    for i in chunks_metadata_list:
-        chunk_index = chunks_metadata_list.index(i)
-        chunk_text = chunks_chunks_list[chunk_index]
-        chunk_image_ref = i["UNIQUEPHOTO"]
-        ranked_doc = {"UNIQUEPHOTO": chunk_image_ref, "PHOTOTEXT": chunk_text}
-        ranked_docs.append(ranked_doc)
+    #for i in chunks_metadata_list:
+        #chunk_index = chunks_metadata_list.index(i)
+        #chunk_text = chunks_chunks_list[chunk_index]
+        #chunk_image_ref = i["UNIQUEPHOTO"]
+        #ranked_doc = {"UNIQUEPHOTO": chunk_image_ref, "PHOTOTEXT": chunk_text}
+        #ranked_docs.append(ranked_doc)
+    client.delete_collection(name="temp_collection")
     return ranked_docs
 
 #using the return from the retrieve documents, get documents returns a set of full-text documents, not just chunks
-def get_documents(uniquephotos):
+def get_documents(uniquephotos, file_path):
   with (open(file_path, newline="") as csv_file):
     data = csv.DictReader(csv_file)
     query_documents = []
@@ -289,6 +301,7 @@ def get_documents(uniquephotos):
             if row["UNIQUEPHOTO"] == item:
                 query_document = {"UNIQUEPHOTO":uniquephoto, "PHOTOTEXT":phototext}
                 query_documents.append(query_document)
+    #print(query_documents)
     return query_documents
 
 def get_namesmentioned(uniquephotos):
@@ -341,6 +354,32 @@ def get_folder(folder_contents):
         sorted_query_documents = sorted(query_documents, key=itemgetter('UNIQUEPHOTO'), reverse=True)
         return sorted_query_documents
 
+def get_general_prompt():
+    general_prompt = input("AI-Assistant: What is the general topic you want to know about? \nUser: ")
+    user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here. \nUser: ")
+    names_wanted = input("To LIMIT the number of retrieved documents to those authored by (or associated with) a single name, provide ONE name. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed name delimiter here. \nUser: ")
+    countries_wanted = input("To LIMIT the number of retrieved documents to those associated with a single country, provide ONE country. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed country delimiter here. \nUser: ")
+
+
+    #embed the query and find matching chunks
+    query_embeddings = ollama_ef(general_prompt)
+    uniquephotos, user_term_1, names_wanted, countries_wanted = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted)
+
+    print(uniquephotos)
+    number_retrieved = len(uniquephotos)
+    print("The " + str(number_retrieved) + " documents listed above have content matching your query.\n If no documents are listed, please enter a different query term below.\n")
+
+    see_names = input("Would you like to see the names associated with these documents? y or n: ")
+    print("\nSee names associated with the retrieved documents with page references (add 1 to get right page number)")
+    if see_names == "y":
+        names_mentioned = get_namesmentioned(uniquephotos)
+        for i in names_mentioned:
+            print(i)
+    else:
+        print("Okay, you can ask for names again later.")
+
+    all_query_documents = get_documents(uniquephotos, file_path)
+    return number_retrieved, all_query_documents, general_prompt
 
 # Here is where the main program starts
 userresponse = "c"
@@ -357,85 +396,25 @@ while userresponse != "q":
         print("Wait a moment, and when you see the >>> prompt, type: "+clear_context+"\n When the >>> appears again, type: " +end_subprocess+ "\n Typing these two entries will clear the context window of the LLM")
         #os.system("cd")
         os.system("ollama run " + inference_model)
-    conv_context = "response"
-    general_prompt = input("AI-Assistant: What is the general topic you want to know about? \nUser: ")
-    user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here. \nUser: ")
-    names_wanted = input("To LIMIT the number of retrieved documents to those authored by (or associated with) a single name, provide ONE name. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed name delimiter here. \nUser: ")
-    countries_wanted = input("To LIMIT the number of retrieved documents to those associated with a single country, provide ONE country. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed country delimiter here. \nUser: ")
-
-    # these serve as error handling, so that if someone doesn't have a specific search term it doesn't return an error or a huge number of irrelevant documents
-
-
-
-    #embed the query and find matching chunks
-    query_embeddings = ollama_ef(general_prompt)
-    uniquephotos, user_term_1, names_wanted, countries_wanted = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted)
-    if user_term_1 == "no__term__given":
-        user_term_1 = ""
-    else:
-        user_term_1 = user_term_1
-
-    if names_wanted == "no__name__given":
-        names_wanted = ""
-    else:
-        names_wanted = names_wanted
-
-    if countries_wanted == "no__country__given":
-        countries_wanted = ""
-    else:
-        countries_wanted = countries_wanted
-
 
     #retrieve full document texts from CSV and string them together into a list of strings that can be entered into LLM context window
-    all_query_documents = get_documents(uniquephotos)
-    #print(query_documents)
-    print(uniquephotos)
-    number_retrieved = len(uniquephotos)
-    print("The " + str(number_retrieved) + " documents listed above have content matching your query.\n If no documents are listed, please enter a different query term below.\n")
+    number_retrieved, all_query_documents, general_prompt = get_general_prompt()
 
-    see_names = input("Would you like to see the names associated with these documents? y or n: ")
-    print("\nSee names associated with the retrieved documents with page references (add 1 to get right page number)")
-    if see_names == "y":
-        names_mentioned = get_namesmentioned(uniquephotos)
-        for i in names_mentioned:
-            print(i)
+    print("If more than "+str(int(ranked_results/context_limiter))+" are listed, \nthe AI-Assistant will re-read them and retrieve only the most relevant documents.\n You may wish to enter a new query to retrieve a smaller number of documents.\n")
+    view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
+    if view_docs != "n":
+        print(all_query_documents)
+        print("See the retrieved documents above. \nNow enter a more specific question below or enter a new query.")
     else:
-        print("Okay, you can ask for names again later.")
+        print("Great. Now enter a more specific question below or enter a new query.")
 
-    redo_general_prompt = input("Would you like to enter a different query term? Type: y or n: ")
-    if redo_general_prompt == "n":
-        view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
-        if view_docs != "n":
-            print(all_query_documents)
-            print("See the retrieved documents above. Now enter a more specific question below")
-        else:
-            print("Great. Now enter a more specific question below")
-    else:
-        print("Okay. Enter a new general topic below.")
+    redo_general_prompt = input("\nWould you like to enter a different query? Type: y or n: ")
+
 
 #this inner loop allows the user to request a different set of documents
     while redo_general_prompt == "y":
-        general_prompt = input("AI-Assistant: What is the general topic you want to know about? \nUser: ")
-        user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here: ")
-        names_wanted = input("To LIMIT the number of retrieved documents to those authored by (or associated with) a single name, provide ONE name. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed name delimiter here: ")
-        countries_wanted = input("To LIMIT the number of retrieved documents to those associated with a single country, provide ONE country. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed country delimiter here: ")
-
-        query_embeddings = ollama_ef(general_prompt)
-        uniquephotos, user_term_1, names_wanted, countries_wanted = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted)
-        user_term_1 = ""
-        all_query_documents = get_documents(uniquephotos)
-        print(uniquephotos)
-        number_retrieved = len(uniquephotos)
-        print("The " + str(number_retrieved) + " documents listed above have content matching your query.\n If no documents are listed, please enter a different query term.")
-
-        see_names = input("\n AI-Assistant: Would you like to see the names associated with these documents? y or n: ")
-        if see_names == "y":
-            names_mentioned = get_namesmentioned(uniquephotos)
-            print("\nSee names associated with the retrieved documents and page references: \n(add 1 to get right page number) ")
-            for i in names_mentioned:
-                print(i)
-        else:
-            print("Okay, you can ask for names again later.")
+        number_retrieved, all_query_documents, general_prompt = get_general_prompt()
+        print("If more than " + str(int(ranked_results / context_limiter)) + " are listed, \nthe AI-Assistant will re-read them and retrieve only the most relevant documents.\n You may wish to enter a new query to retrieve a smaller number of documents.\n")
 
         view_docs = input("\nWould you like to view the documents matching your general query? Type: y or n: ")
         if view_docs != "n":
@@ -457,26 +436,25 @@ while userresponse != "q":
     conv_context = "response"
     prompt = first_query()
 
-    if number_retrieved > ranked_results/context_limiter:
-        query_documents = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results)
+    if number_retrieved > int(ranked_results/context_limiter):
+        query_documents = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
+
     else:
         query_documents = all_query_documents
 
-
-    conv_context = response_generation(query_documents,prompt)
-    print("Here is the AI-Assistant's summary of relevant material from the documents: \n--")
+    #print(query_documents)
+    conv_context = response_generation(query_documents, prompt)
+    print("\nHere is the AI-Assistant's summary of relevant material from the documents: \n--")
     print(conv_context)
     print("--\n")
     view_folder = "n"
-    view_docs = "n"
-    view_docs = input("\nWould you like to view any of the referenced documents? y/n: ")
-    while view_docs == "y":
+    view_desired_doc = "n"
+    view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
+    while view_desired_doc != "n":
         view_doc =[]
         desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
-    #print(desired_doc)
         view_doc.append(desired_doc)
-    #print(view_doc)
-        doc_text = get_documents(view_doc)
+        doc_text = get_documents(view_doc, file_path)
         print("\nHere is the full text of document "+desired_doc+"\n--")
         print(doc_text)
         print("--\n")
@@ -495,7 +473,7 @@ while userresponse != "q":
         print("See contents of folder above. There are " + str(folder_length) + " pages in this folder.\n")
         conv_continue = input("\nWould you like to ask questions about the contents of this folder? y/n: ")
         if folder_length > ranked_results / context_limiter:
-            folder_docs = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results)
+            folder_docs = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
         else:
             folder_docs = folder_docs
     else:
@@ -523,19 +501,26 @@ while userresponse != "q":
         conv_context = "response"
         prompt = "prompt"
         query_documents = folder_docs
+        view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
+        if view_docs != "n":
+            print(query_documents)
+            print("See the retrieved documents above. Now enter a more specific question below")
+        else:
+            print("Great. Now enter a new question below")
         prompt = topic_query()
         conv_context = response_generation(query_documents, prompt)
         print("\nHere is the AI-Assistant's summary of relevant material from the documents: \n--")
         print(conv_context)
         print("--\n")
-        view_docs = input("Would you like to view any of the referenced documents? y/n: ")
-        while view_docs == "y":
+        view_desired_doc = "n"
+        view_desired_doc = input("Would you like to view any of the referenced documents? y/n: ")
+        while view_desired_doc != "n":
             view_doc = []
             desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
             # print(desired_doc)
             view_doc.append(desired_doc)
             # print(view_doc)
-            doc_text = get_documents(view_doc)
+            doc_text = get_documents(view_doc, file_path)
             print("\nHere is the full text of document " + desired_doc + "\n--")
             print(doc_text)
             print("--\n")
@@ -554,7 +539,7 @@ while userresponse != "q":
             print("See contents of folder above. There are " + str(folder_length) + " pages in this folder.\n")
             conv_continue = input("\nWould you like to ask questions about the contents of this folder? y/n: ")
             if folder_length > ranked_results / context_limiter:
-                folder_docs = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results)
+                folder_docs = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
             else:
                 folder_docs = folder_docs
         else:
@@ -570,4 +555,3 @@ while userresponse != "q":
 print("\nThank you. I hope you found what you were looking for!")
 gc.collect()
 exit()
-
