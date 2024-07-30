@@ -270,8 +270,10 @@ else:
                 #print("currentingest is: "+currentingest)
                 if currentingest in [c.name for c in client.list_collections()]:
                     #we need a loop here to delete the relevant rows of the relevant compiled CSVs and replace them with the re-ingested rows
-                    client.delete_collection(name=currentingest)
-                    ingest_csv(currentingest, archive_collection, topic_collection)
+                    #client.delete_collection(name=currentingest)
+                    #ingest_csv(currentingest, archive_collection, topic_collection)
+                    os.system("mv "+ingest_folder+"/"+i+" "+i)
+                    print(i+" has already been ingested. Please delete the collection and relevant lines in CSV files.")
                 else:
                     ingest_csv(currentingest, archive_collection, topic_collection)
     gc.collect()
