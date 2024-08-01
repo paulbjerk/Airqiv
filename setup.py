@@ -1,13 +1,18 @@
-import csv
 import os
 
 print("\n   - - The Airqiv Document Explorer  - -       ")
-print("          - - www.airqiv.com  - -       ")
-print("\nAI-Assistant Document Explorer")
+print("             - - airqiv.com  - -       ")
+print("- - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
+print("                - - :-) - -         \n")
+print("\nArqiv AI-Assistant Document Explorer")
 print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
 print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
 print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
+print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
+
+# https://www.reddit.com/r/LangChain/comments/15a447w/chroma_or_faiss/
+# https://python.langchain.com/v0.2/docs/integrations/vectorstores/chroma/
 
 embed_model = "mxbai-embed-large"
 embed_model_dimensions = "1024"
@@ -33,11 +38,6 @@ mac_model = input ("What chip does your Mac have? Type M1 or M2, or M3: ")
 ram_memory_input = input ("How many GB of RAM memory does your Mac have? (type a number): ")
 ram_memory = int(ram_memory_input)
 
-archive_collection = input("What is the broadest one-word category for these documents? (e.g. the archive abbreviation, or collection name): ")
-topic_collection = input("If this is a large collection, what is the sub-set of these documents (e.g. the relevant country, theme, topic, individual, case): ")
-print("You should place the CSVs in nested folders in the ai-assistant folder, the nested folders should follow the one-word broad category and sub-set names entered above")
-
-
 #install chromadb and the underlying chat model (LLM: phi3)
 print("Make sure the above information was entered correctly. \nThis next step will run automatically and take a 5-10 minutes depending on system and internet speed")
 
@@ -58,18 +58,6 @@ os.system("ollama pull " + inference_model)
 print("The basic LLM inference model, "+inference_model+" has been installed. \nFor more information see https://ollama.com/library/"+inference_model_short+".\n")
 
 # functions used
-
-def create_csv(collection):
-    fieldnames = ["FOLDERNAME", "LANGUAGE", "PHOTONAME", "UNIQUEPHOTO", "PHOTOTEXT", "NAMESMENTIONED","COUNTRIESMENTIONED","INSTRUCTION","CONTEXT","RESPONSE",]
-    with open(str("all-"+collection+"-documents.csv"), mode="w",) as new_file:
-        writer = csv.DictWriter(new_file, fieldnames=fieldnames)
-        writer.writeheader()
-
-def create_folder(archive_collection):
-    os.system("mkdir "+archive_collection)
-
-def create_sub_folder(archive_collection, topic_collection):
-    os.system("mkdir "+archive_collection+"/"+topic_collection)
 
 # These create models (modelfile) with context lengths appropriate to the user's RAM memory
 #https://github.com/ollama/ollama/blob/main/docs/modelfile.md
@@ -213,19 +201,9 @@ elif ram_memory > 29:
         os.system("ollama show --modelfile llama3-16k")
 
 
-#these create starting points for collection CSVs
-create_csv(archive_collection)
-create_csv(topic_collection)
-create_folder(archive_collection)
-create_sub_folder(archive_collection, topic_collection)
+print("\nThe information above summarizes the inference model we will use to explore the retrieved documents.\n The model allows a context length of " +inference_model_window+ ", which represent words or parts of words. \nDivide tokens by 1.5 to get approximate number of words that the model can analyze in the retrieved documents.\nEach page of these documents contains an average of 350 words, so a 2k model analyzes about 4 pages at a time, and an 8k model about 16 pages.\n")
 
-print("The information above summarizes the inference model we will use to explore the retrieved documents.\n The model allows a context length of " +inference_model_window+ ", which represent words or parts of words. \nDivide tokens by 1.5 to get approximate number of words that the model can analyze in the retrieved documents.\nEach page of these documents contains an average of 350 words, so a 2k model analyzes about 4 pages at a time, and an 8k model about 16 pages.\n")
-
-print("A folder called "+topic_collection+"has been created inside a folder called "+archive_collection+" in the ai-assistant folder.\nYou should copy CSV files to be ingested here.\n")
-print("A CSV template called all-"+archive_collection+"-documents.csv has been created.\nIngested documents will be added here together with all documents from this broad collection.\n")
-print("A CSV template called all-"+topic_collection+"-documents.csv has been created.\nIngested documents will also be added here together with all documents from this topic sub-set collection.\n")
-
-print("Now type python3 ingest.py in order to begin ingesting CSV documents.")
+print("\nNow type python3 ingest.py in order to begin ingesting CSV documents.")
 
 #this removes a temporary file created for the purpose of creating the modelfile
 os.remove("model-template.txt")
