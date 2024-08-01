@@ -7,13 +7,15 @@ import os
 from operator import itemgetter
 
 print("\n   - - The Airqiv Document Explorer  - -       ")
-print("          - - www.airqiv.com  - -       ")
-print("\nAI-Assistant Document Explorer")
+print("             - - airqiv.com  - -       ")
+print("- - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
+print("                - - :-) - -         \n")
+print("\nArqiv AI-Assistant Document Explorer")
 print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
 print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
 print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
-
+print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
 #general variables
 #embed_model = "snowflake-arctic-embed:335m"
 embed_model = "mxbai-embed-large:latest"
@@ -50,6 +52,7 @@ names_wanted = ""
 countries_wanted = ""
 sentencesneeded = "3"
 general_prompt = "What is the main theme in these documents?"
+
 
 # a higher context limiter number makes it more likely that the retrieved documents will be chunked and ranked rather than fed in their entirety into the LLM context.
 # the context limiter is a divisor to test the number of retrieved documents against the maximium context length of the LLM
@@ -101,7 +104,8 @@ client = chromadb.PersistentClient(path="chromadb/phototextvectors")
 
 #these prompt the user to designate a CSV and loads it for queries
 print("\nQuery the assistant to explore your documents!")
-currentingest = input("What collection do you want to explore? \n Enter the filename only, without the .csv suffix. (e.g. all-nara-documents)\n It's best to copy-paste to avoid typos: ")
+desired_collection = input("What collection do you want to explore? \n Enter the archive abbreviation or thematic one-word name only, in lower-case letters. (e.g. nara, lbj, vietnam, tanzania): \n")
+currentingest = str("all-"+desired_collection+"documents")
 file_path = currentingest+".csv"
 collection = client.get_collection(name=currentingest, embedding_function=ollama_ef)
 
@@ -136,7 +140,7 @@ def list_metadata(metadata_list, metadata_key):
     return uniquephotos
 
 #retrieve documents brings back relevant full-documents in two steps, first by matching the query embedding second by a simple term search
-def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted):
+def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted, sub_collection):
     #first step retrieves relevant chunks via embeddings that match the query embedding
     all_metadatas = []
     retrieved_chunks =[]
@@ -193,23 +197,60 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
     else:
         user_term_1 = user_term_1
 
+    if sub_collection =="":
+        sub_collection = "no__subcollection__given"
+    elif sub_collection == "NONE":
+        sub_collection = "no__subcollection__given"
+    elif sub_collection == " ":
+        sub_collection = "no__subcollection__given"
+    elif sub_collection == "none":
+        sub_collection = "no__subcollection__given"
+    elif sub_collection == "None":
+        sub_collection = "no__subcollection__given"
+    elif sub_collection == "n":
+        sub_collection = "no__subcollection__given"
+    elif sub_collection == None:
+        sub_collection = "no__subcollection__given"
+    else:
+        sub_collection = sub_collection
+
 
     if names_wanted != "no__name__given":
-        retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted})
-        metadata_in_list = retrieved_chunks["metadatas"]
-        chunks_metadata_list = metadata_in_list[0]
+        if sub_collection != "no__subcollection__given":
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted, "SUBCOLLECTION": sub_collection})
+            metadata_in_list = retrieved_chunks["metadatas"]
+            chunks_metadata_list = metadata_in_list[0]
+        else:
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted})
+            metadata_in_list = retrieved_chunks["metadatas"]
+            chunks_metadata_list = metadata_in_list[0]
     elif countries_wanted != "no__country__given":
-        retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"COUNTRIESMENTIONED": countries_wanted})
-        metadata_in_list = retrieved_chunks["metadatas"]
-        chunks_metadata_list = metadata_in_list[0]
+        if sub_collection != "no__subcollection__given":
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
+            metadata_in_list = retrieved_chunks["metadatas"]
+            chunks_metadata_list = metadata_in_list[0]
+        elif:
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"COUNTRIESMENTIONED": countries_wanted})
+            metadata_in_list = retrieved_chunks["metadatas"]
+            chunks_metadata_list = metadata_in_list[0]
     elif names_wanted != "no__name__given" and countries_wanted != "no__countries__wanted":
-        retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted})
-        metadata_in_list = retrieved_chunks["metadatas"]
-        chunks_metadata_list = metadata_in_list[0]
+        if sub_collection != "no__subcollection__given":
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
+            metadata_in_list = retrieved_chunks["metadatas"]
+            chunks_metadata_list = metadata_in_list[0]
+        else:
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted})
+            metadata_in_list = retrieved_chunks["metadatas"]
+            chunks_metadata_list = metadata_in_list[0]
     else:
-        retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15)
-        metadata_in_list = retrieved_chunks["metadatas"]
-        chunks_metadata_list = metadata_in_list[0]
+        if sub_collection != "no__subcollection__given":
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"SUBCOLLECTION": sub_collection})
+            metadata_in_list = retrieved_chunks["metadatas"]
+            chunks_metadata_list = metadata_in_list[0]
+        else:
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15)
+            metadata_in_list = retrieved_chunks["metadatas"]
+            chunks_metadata_list = metadata_in_list[0]
 
 
     for item in chunks_metadata_list:
@@ -223,7 +264,8 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
         all_metadatas.append(item)
     uniquephotos = list_metadata(all_metadatas, metadata_key)
     #print(uniquephotos)
-    return uniquephotos, user_term_1, names_wanted, countries_wanted
+    #return uniquephotos, user_term_1, names_wanted, countries_wanted
+    return uniquephotos
 
 
 
@@ -272,7 +314,7 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
     for item in chunks_metadata_list:
         all_metadatas.append(item)
     uniquephotos = list_metadata(all_metadatas, metadata_key)
-    ranked_docs = get_documents(uniquephotos, file_path)
+    ranked_docs, copyright_notice = get_documents(uniquephotos, file_path)
     #print(ranked_docs)
 
     #chunks_in_list = ranked_chunks["documents"]
@@ -297,13 +339,39 @@ def get_documents(uniquephotos, file_path):
     for row in data:
         uniquephoto = row["UNIQUEPHOTO"]
         phototext = row["PHOTOTEXT"]
+        copyright_notice = row["COPYRIGHT"]
         for item in uniquephotos:
             if row["UNIQUEPHOTO"] == item:
                 query_document = {"UNIQUEPHOTO":uniquephoto, "PHOTOTEXT":phototext}
                 query_documents.append(query_document)
+            else:
+                print("This item reference is not in the database. Please check the reference")
     #print(query_documents)
-    return query_documents
+    return query_documents, copyright_notice
 
+def open_website(uniquephotos, file_path):
+    with (open(file_path, newline="") as csv_file):
+        data = csv.DictReader(csv_file)
+        open_url = ""
+        page_ref = ""
+        #query_documents = []
+        for row in data:
+            #uniquephoto = row["UNIQUEPHOTO"]
+            #phototext = row["PHOTOTEXT"]
+            page_ref = row["UNIQUEPHOTO"]
+            url = row["URL"]
+            for item in uniquephotos:
+                if row["UNIQUEPHOTO"] == item:
+                    open_url = str(url)
+                    #query_document = {"UNIQUEPHOTO": uniquephoto, "PHOTOTEXT": phototext}
+                    #query_documents.append(query_document)
+                else:
+                    print("This item reference is not in the database. Please check the reference")
+        # print(query_documents)
+        print("Now opening the website in your Safari browser, find the page for "+page_ref)
+        open_website_command = str("'/Applications/Safari.app' '"+open_url+"'")
+        os.system("open " +open_website_command)
+        return open_url
 def get_namesmentioned(uniquephotos):
   with (open(file_path, newline="") as csv_file):
     data = csv.DictReader(csv_file)
@@ -359,31 +427,38 @@ def get_general_prompt():
     user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here. \nUser: ")
     names_wanted = input("To LIMIT the number of retrieved documents to those authored by (or associated with) a single name, provide ONE name. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed name delimiter here. \nUser: ")
     countries_wanted = input("To LIMIT the number of retrieved documents to those associated with a single country, provide ONE country. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed country delimiter here. \nUser: ")
+    sub_collection = input("To LIMIT the number of retrieved documents to those associated with a single sub-collection (e.g oh: oral histories or RG59: NARA Record Group 59), provide ONE abbreviation. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the abbreviated sub-collection delimiter here. \nUser: ")
 
 
+    #countries_wanted = countries_wanted.lower()
+    sub_collection = sub_collection.lower()
     #embed the query and find matching chunks
     query_embeddings = ollama_ef(general_prompt)
-    uniquephotos, user_term_1, names_wanted, countries_wanted = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted)
+    #uniquephotos, user_term_1, names_wanted, countries_wanted = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted, sub_collection)
+    uniquephotos = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted, sub_collection)
 
     print(uniquephotos)
     number_retrieved = len(uniquephotos)
     print("The " + str(number_retrieved) + " documents listed above have content matching your query.\n If no documents are listed, please enter a different query term below.\n")
+    print("If more than "+str(int(ranked_results/context_limiter))+" documents are listed, \nthe AI-Assistant will re-read them and retrieve only the most relevant documents.\n You may wish to enter a new query to retrieve a smaller number of documents.\n")
 
     see_names = input("Would you like to see the names associated with these documents? y or n: ")
-    print("\nSee names associated with the retrieved documents with page references (add 1 to get right page number)")
     if see_names == "y":
+        print("\nSee names associated with the retrieved documents with page references (add 1 to get right page number)")
         names_mentioned = get_namesmentioned(uniquephotos)
         for i in names_mentioned:
             print(i)
     else:
         print("Okay, you can ask for names again later.")
 
-    all_query_documents = get_documents(uniquephotos, file_path)
-    return number_retrieved, all_query_documents, general_prompt
+    all_query_documents, copyright_notice = get_documents(uniquephotos, file_path)
+    return number_retrieved, all_query_documents, general_prompt, copyright_notice
 
 # Here is where the main program starts
+
 userresponse = "c"
 conv_continue = "y"
+copyright_notice = str("Copyright of " + desired_collection + ". Fair use criteria of Section 107 of the Copyright Act of 1976 must be followed. The following materials can be used for educational and other noncommercial purposes without the written permission of " + desired_collection + ". These materials are not to be used for resale or commercial purposes without written authorization from " + desired_collection + ". This text extraction and summarization process and software is designed and copyrighted by Paul Bjerk. All materials cited must be attributed to the " + desired_collection + ", and The Airqiv Document Explorer at airqiv.com ")
 
 # The first while loop prompts the user for a query, if the query returns too many or too few documents, the user can re-phrase it in an inner while loop
 #it seems helpful allow the user to clear the context window of the LLM from time to time
@@ -398,9 +473,8 @@ while userresponse != "q":
         os.system("ollama run " + inference_model)
 
     #retrieve full document texts from CSV and string them together into a list of strings that can be entered into LLM context window
-    number_retrieved, all_query_documents, general_prompt = get_general_prompt()
+    number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt()
 
-    print("If more than "+str(int(ranked_results/context_limiter))+" are listed, \nthe AI-Assistant will re-read them and retrieve only the most relevant documents.\n You may wish to enter a new query to retrieve a smaller number of documents.\n")
     view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
     if view_docs != "n":
         print(all_query_documents)
@@ -413,8 +487,7 @@ while userresponse != "q":
 
 #this inner loop allows the user to request a different set of documents
     while redo_general_prompt == "y":
-        number_retrieved, all_query_documents, general_prompt = get_general_prompt()
-        print("If more than " + str(int(ranked_results / context_limiter)) + " are listed, \nthe AI-Assistant will re-read them and retrieve only the most relevant documents.\n You may wish to enter a new query to retrieve a smaller number of documents.\n")
+        number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt()
 
         view_docs = input("\nWould you like to view the documents matching your general query? Type: y or n: ")
         if view_docs != "n":
@@ -427,6 +500,7 @@ while userresponse != "q":
 
     userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
     if userresponse == "q":
+        #print(copyright_notice)
         exit()
     else:
         print("Let's continue.\n")
@@ -454,11 +528,18 @@ while userresponse != "q":
         view_doc =[]
         desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
         view_doc.append(desired_doc)
-        doc_text = get_documents(view_doc, file_path)
+        doc_text, copyright_notice = get_documents(view_doc, file_path)
         print("\nHere is the full text of document "+desired_doc+"\n--")
         print(doc_text)
         print("--\n")
-        view_docs = input("Would you like to view another of the referenced documents? y/n: ")
+        view_website = "n"
+        input("Would you like to open the website of this document? Type y or n: ")
+        if view_website != "n":
+            open_url = open_website(desired_doc, file_path)
+            print("Please find your Safari browser window to view "+open_url)
+        else:
+            print("Okay, you can retrieve this website again later.")
+        view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
 
     view_folder = input("Would you like to retrieve all documents in this folder? Type y or n: ")
     folder_contents = []
@@ -484,6 +565,7 @@ while userresponse != "q":
 
     userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
     if userresponse == "q":
+        print(copyright_notice)
         exit()
     else:
         print("Let's continue.\n")
@@ -520,11 +602,18 @@ while userresponse != "q":
             # print(desired_doc)
             view_doc.append(desired_doc)
             # print(view_doc)
-            doc_text = get_documents(view_doc, file_path)
+            doc_text, copyright_notice = get_documents(view_doc, file_path)
             print("\nHere is the full text of document " + desired_doc + "\n--")
             print(doc_text)
             print("--\n")
-            view_docs = input("Would you like to view another of the referenced documents? y/n: ")
+            view_website = "n"
+            input("Would you like to open the website of this document? Type y or n: ")
+            if view_website != "n":
+                open_url = open_website(view_doc, file_path)
+                print("Please find your Safari browser window to view " + open_url)
+            else:
+                print("Okay, you can retrieve this website again later.")
+            view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
 
         view_folder = input("Would you like to retrieve all documents in this folder? Type y or n: ")
         folder_contents = []
@@ -552,6 +641,7 @@ while userresponse != "q":
     gc.collect()
     userresponse = input("\nWhat do you want to do? \n type q to quit or c to continue: ")
 
-print("\nThank you. I hope you found what you were looking for!")
+print("\nThank you. I hope you found what you were looking for!\n")
+print(copyright_notice)
 gc.collect()
 exit()
