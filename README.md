@@ -12,7 +12,7 @@ To use: This only works on an M-series Apple Macintosh computer (2020 or later).
 6. Type - cd ai-assistant
 7. Type - python3 setup.py
 8. Run the set up program. You need to be online for this as it will download chromadb, ollama, and some language models from ollama.
-9. When prompted to enter archive name and topical collection, type (lowercase, just the word, not the dashes): - nara - for the archive and - tanzania - for the topical collection
+9. When prompted enter your M-series chip and RAM memory (available from "About this Mac" under the Apple menu)
 10. In terminal type - python3 ingest.py
 11. Ingest the CSV file in the folder by copying and pasting just the file name (i.e. enter only nara_tanzania_RG59-67-69-Box2513 ...without the .csv suffix)
 12. When prompted to enter archive name and topical collection, type (lowercase, just the word, not the dashes): - nara - for the archive and - tanzania - for the topical collection (it also asks for sub-collection, for this type snf... i.e. the State Department Subject Numeric File) 
