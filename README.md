@@ -1,5 +1,5 @@
 # AI-Assistant
-This is a Retrieval Augmented Generation (RAG) process for Apple M-series Mac computers. It uses Ollama and ChromaDB, and is written in Python.
+The Airqiv AI-Assistant Document Explorer is a Retrieval Augmented Generation (RAG) process for Apple M-series Mac computers. It uses Ollama and ChromaDB, and is written in Python.
 To use you can dowload the three python files, and the CSV file as a model for ingest. This CSV file contains the text extracted via an OCR process from photos of documents at the US National Archive (NARA II) in College Park, MD. Photos of the archival box and first full document (five photos which are the first five entries in the spreadsheet) are also included here.
 
 To use: This only works on an M-series Apple Macintosh computer (2020 or later). 
