@@ -6,10 +6,10 @@ import chromadb.utils.embedding_functions as embedding_functions
 import os
 from operator import itemgetter
 
-print("\n   - - The Airqiv Document Explorer  - -       ")
-print("             - - airqiv.com  - -       ")
-print("- - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
-print("                - - :-) - -         \n")
+print("\n           - - The Airqiv Document Explorer  - -       ")
+print(" - - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
+print("                     - - airqiv.com  - -       ")
+print("                        - - :-) - -         \n")
 print("\nArqiv AI-Assistant Document Explorer")
 print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
@@ -52,6 +52,9 @@ names_wanted = ""
 countries_wanted = ""
 sentencesneeded = "3"
 general_prompt = "What is the main theme in these documents?"
+open_url = ""
+archive_name =""
+archive_url = ""
 
 
 # a higher context limiter number makes it more likely that the retrieved documents will be chunked and ranked rather than fed in their entirety into the LLM context.
@@ -105,7 +108,7 @@ client = chromadb.PersistentClient(path="chromadb/phototextvectors")
 #these prompt the user to designate a CSV and loads it for queries
 print("\nQuery the assistant to explore your documents!")
 desired_collection = input("What collection do you want to explore? \n Enter the archive abbreviation or thematic one-word name only, in lower-case letters. (e.g. nara, lbj, vietnam, tanzania): \n")
-currentingest = str("all-"+desired_collection+"documents")
+currentingest = str("all-"+desired_collection+"-documents")
 file_path = currentingest+".csv"
 collection = client.get_collection(name=currentingest, embedding_function=ollama_ef)
 
@@ -229,7 +232,7 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
             retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
-        elif:
+        else:
             retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"COUNTRIESMENTIONED": countries_wanted})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
@@ -344,8 +347,8 @@ def get_documents(uniquephotos, file_path):
             if row["UNIQUEPHOTO"] == item:
                 query_document = {"UNIQUEPHOTO":uniquephoto, "PHOTOTEXT":phototext}
                 query_documents.append(query_document)
-            else:
-                print("This item reference is not in the database. Please check the reference")
+            #else:
+                #print("This item reference is not in the database. Please check the reference")
     #print(query_documents)
     return query_documents, copyright_notice
 
@@ -422,7 +425,7 @@ def get_folder(folder_contents):
         sorted_query_documents = sorted(query_documents, key=itemgetter('UNIQUEPHOTO'), reverse=True)
         return sorted_query_documents
 
-def get_general_prompt():
+def get_general_prompt(file_path):
     general_prompt = input("AI-Assistant: What is the general topic you want to know about? \nUser: ")
     user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here. \nUser: ")
     names_wanted = input("To LIMIT the number of retrieved documents to those authored by (or associated with) a single name, provide ONE name. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed name delimiter here. \nUser: ")
@@ -473,7 +476,7 @@ while userresponse != "q":
         os.system("ollama run " + inference_model)
 
     #retrieve full document texts from CSV and string them together into a list of strings that can be entered into LLM context window
-    number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt()
+    number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt(file_path)
 
     view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
     if view_docs != "n":
@@ -487,7 +490,7 @@ while userresponse != "q":
 
 #this inner loop allows the user to request a different set of documents
     while redo_general_prompt == "y":
-        number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt()
+        number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt(file_path)
 
         view_docs = input("\nWould you like to view the documents matching your general query? Type: y or n: ")
         if view_docs != "n":
@@ -506,13 +509,54 @@ while userresponse != "q":
         print("Let's continue.\n")
 
     gc.collect()
+    if desired_collection == "nara":
+        archive_name = "The United States National Archives"
+        archive_url = "archives.gov"
+    elif desired_collection == "jfk":
+        archive_name = "The John F. Kennedy Presidential Library"
+        archive_url = "jfklibrary.org"
+    elif desired_collection == "lbj":
+        archive_name = "The Lyndon Baines Johnson Presidential Library"
+        archive_url = "lbjlibrary.org"
+    elif desired_collection == "rmn":
+        archive_name = "The Richard M. Nixon Presidential Library"
+        archive_url = "nixonlibrary.gov"
+    elif desired_collection == "grf":
+        archive_name = "The Gerald R. Ford Presidential Library"
+        archive_url = "fordlibrarymuseum.gov"
+    elif desired_collection == "jec":
+        archive_name = "The Jimmy Carter Presidential Library"
+        archive_url = "jimmycarterlibrary.gov"
+    elif desired_collection == "rwb":
+        archive_name = "The Ronald Reagan Presidential Library"
+        archive_url = "reaganlibrary.gov"
+    elif desired_collection == "ghwb":
+        archive_name = "The George H.W. Bush Library"
+        archive_url = "bush41.org"
+    elif desired_collection == "imf":
+        archive_name = "The International Monetary Fund (IMF)"
+        archive_url = "imf.org"
+    elif desired_collection == "pro":
+        archive_name = "The United Kingdom National Archives, formerly the Public Record Office (PRO)"
+        archive_url = "nationalarchives.gov.uk"
+    elif desired_collection == "tna":
+        archive_name = "The Tanzania National Archives"
+        archive_url = "nyaraka.go.tz"
+    elif desired_collection == "kna":
+        archive_name = "The Kenya National Archives"
+        archive_url = "archives.go.ke"
+    elif desired_collection == "ttuva":
+        archive_name = "The Vietnam Archive at Texas Tech University"
+        archive_url = "vva.vietnam.ttu.edu"
+    else:
+        archive_name = desired_collection
+        archive_url = str("For more information search for the archives of " + desired_collection)
 
     conv_context = "response"
     prompt = first_query()
 
     if number_retrieved > int(ranked_results/context_limiter):
         query_documents = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
-
     else:
         query_documents = all_query_documents
 
@@ -534,8 +578,12 @@ while userresponse != "q":
         print("--\n")
         view_website = "n"
         input("Would you like to open the website of this document? Type y or n: ")
-        if view_website != "n":
+        if view_website == "y":
             open_url = open_website(desired_doc, file_path)
+            if open_url == "" or open_url is None:
+                open_url = archive_url
+            else:
+                open_url = open_url
             print("Please find your Safari browser window to view "+open_url)
         else:
             print("Okay, you can retrieve this website again later.")
@@ -610,6 +658,12 @@ while userresponse != "q":
             input("Would you like to open the website of this document? Type y or n: ")
             if view_website != "n":
                 open_url = open_website(view_doc, file_path)
+                if view_website == "y":
+                    open_url = open_website(desired_doc, file_path)
+                    if open_url == "" or open_url is None:
+                        open_url = archive_url
+                    else:
+                        open_url = open_url
                 print("Please find your Safari browser window to view " + open_url)
             else:
                 print("Okay, you can retrieve this website again later.")
@@ -645,3 +699,4 @@ print("\nThank you. I hope you found what you were looking for!\n")
 print(copyright_notice)
 gc.collect()
 exit()
+
