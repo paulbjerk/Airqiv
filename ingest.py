@@ -8,10 +8,10 @@ import re
 import statistics
 from statistics import mode
 
-print("\n   - - The Airqiv Document Explorer  - -       ")
-print("             - - airqiv.com  - -       ")
-print("- - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
-print("                - - :-) - -         \n")
+print("\n           - - The Airqiv Document Explorer  - -       ")
+print(" - - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
+print("                     - - airqiv.com  - -       ")
+print("                        - - :-) - -         \n")
 print("\nArqiv AI-Assistant Document Explorer")
 print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
@@ -104,6 +104,7 @@ def add_new_documents(file_path, collection, archive_collection, topic_collectio
 
 
         copyright = str("Copyright of "+archive_name+". Fair use criteria of Section 107 of the Copyright Act of 1976 must be followed. The following materials can be used for educational and other noncommercial purposes without the written permission of "+archive_name+". These materials are not to be used for resale or commercial purposes without written authorization from "+archive_name+". This text extraction and summarization process and software is designed and copyrighted by Paul Bjerk. All materials cited must be attributed to the "+archive_name+" at "+archive_url+" and The Airqiv Document Explorer at airqiv.com ")
+
         #added_values = [archive_collection, topic_collection, sub_collection]
         #this next step skips adding the header, presuming the header already exists
         #but we need an if statement to add a header if it does not exist, i.e. if the csv was not pre-created in the setup 
@@ -111,11 +112,11 @@ def add_new_documents(file_path, collection, archive_collection, topic_collectio
         all_files = csv.DictWriter(new_file, fieldnames=fieldnames)
         for row in current:
             row["COPYRIGHT"] = copyright
-            row["URL"] = archive_url
-            all_files.writerow(row)
+            #row["URL"] = archive_url
             row["ARCHIVE"] = archive_collection
             row["TOPIC"] = topic_collection
             row["SUBCOLLECTION"] = sub_collection
+            all_files.writerow(row)
 
 # create CSV creates a CSV with standard column headings
 def create_csv(collection):
@@ -161,8 +162,10 @@ def get_documents(file_path):
             phototext = row["PHOTOTEXT"]
             namesmentioned = str(row["NAMESMENTIONED"])
             countriesmentioned = str(row["COUNTRIESMENTIONED"])
-            url = str(row["URL"])
-            copyright = str(row["COPYRIGHT"])
+            #url = str(row["URL"])
+            #copyright = str(row["COPYRIGHT"])
+            url = ""
+            copyright = ""
             country_mentioned = str(most_frequent(countriesmentioned))
             name_mentioned = str(most_frequent(namesmentioned))
             archive = archive_collection
@@ -284,11 +287,23 @@ while file_entry != "y":
 
 # This step looks at the CSV files created in setup in order to use them or create new ones for the ingest
 #ollama_models = os.popen("ollama list").read()
-configured_collections=os.popen("ls").read()
-if archive_collection in configured_collections:
-    existing_subfolders = os.popen(archive_collection+" ls").read()
+configured_folders=os.popen("ls -R").read()
+configured_collections = os.popen("ls").read()
+if str("./"+archive_collection+":") in configured_folders:
+    print("We will begin to create collections in this archive folder.")
+    #list_command = str(archive_collection + " ls")
+    #existing_subfolders = os.popen(list_command).read()
 else:
+    print("We will create a folder for this archive.")
+    #list_command = str(archive_collection + " ls")
     create_folder(archive_collection)
+    #existing_subfolders = os.popen(list_command).read()
+
+if str("./"+archive_collection+"/"+topic_collection+":") in configured_folders:
+    print("We will add this CSV to the sub-folder titled " + topic_collection + " in the "+archive_collection+" folder.")
+else:
+    print("We will create a new sub-folder titled " + topic_collection + " in the " + archive_collection + " folder.")
+    create_sub_folder(archive_collection, topic_collection)
 
 if "all-"+archive_collection+"-documents.csv" in configured_collections:
     print("We will add the documents in this CSV file to all-"+archive_collection+"-documents")
@@ -296,13 +311,6 @@ else:
     # this creates a starting point for a new collection CSV
     print("We will add the documents in this CSV file to all-" + archive_collection + "-documents")
     create_csv(archive_collection)
-
-if topic_collection in existing_subfolders:
-    print("We will create a new sub-folder titled " + topic_collection + " in the "+archive_collection+" folder.")
-else:
-    #this creates a starting point for a new collection CSV
-    #print("We will add the documents in this CSV file to all-" + topic_collection + "-documents")
-    create_sub_folder(archive_collection, topic_collection)
 
 if "all-"+topic_collection+"-documents.csv" in configured_collections:
     print("We will add the documents in this CSV file to all-" + topic_collection + "-documents")
