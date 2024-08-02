@@ -353,10 +353,12 @@ def get_documents(uniquephotos, file_path):
     return query_documents, copyright_notice
 
 def open_website(uniquephotos, file_path):
+    open_url = ""
+    page_ref = ""
     with (open(file_path, newline="") as csv_file):
         data = csv.DictReader(csv_file)
-        open_url = ""
-        page_ref = ""
+        #open_url = ""
+        #page_ref = ""
         #query_documents = []
         for row in data:
             #uniquephoto = row["UNIQUEPHOTO"]
@@ -368,12 +370,10 @@ def open_website(uniquephotos, file_path):
                     open_url = str(url)
                     #query_document = {"UNIQUEPHOTO": uniquephoto, "PHOTOTEXT": phototext}
                     #query_documents.append(query_document)
-                else:
-                    print("This item reference is not in the database. Please check the reference")
+                #else:
+                    #print("This item reference is not in the database. Please check the reference")
         # print(query_documents)
-        print("Now opening the website in your Safari browser, find the page for "+page_ref)
-        open_website_command = str("'/Applications/Safari.app' '"+open_url+"'")
-        os.system("open " +open_website_command)
+
         return open_url
 def get_namesmentioned(uniquephotos):
   with (open(file_path, newline="") as csv_file):
@@ -451,6 +451,32 @@ def get_general_prompt(file_path):
         names_mentioned = get_namesmentioned(uniquephotos)
         for i in names_mentioned:
             print(i)
+        view_desired_doc = "n"
+        view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
+        while view_desired_doc != "n":
+            view_doc = []
+            desired_doc = str(input(
+                "To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
+            view_doc.append(desired_doc)
+            doc_text, copyright_notice = get_documents(view_doc, file_path)
+            print("\nHere is the full text of document " + desired_doc + "\n--")
+            print(doc_text)
+            print("--\n")
+            view_website = "n"
+            view_website = input("Would you like to open the website of this document? Type y or n: ")
+            if view_website == "y":
+                open_url = open_website(view_doc, file_path)
+                if open_url == "" or open_url is None:
+                    open_url = archive_url
+                else:
+                    open_url = open_url
+                print("Now opening the website in your Safari browser, find the page for " + desired_doc)
+                open_website_command = str("open '/Applications/Safari.app' '" + open_url + "'")
+                os.system(open_website_command)
+                #print("Please find your Safari browser window to view " + open_url)
+            else:
+                print("Okay, you can retrieve this website again later.")
+            view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
     else:
         print("Okay, you can ask for names again later.")
 
@@ -569,22 +595,25 @@ while userresponse != "q":
     view_desired_doc = "n"
     view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
     while view_desired_doc != "n":
-        view_doc =[]
+        view_doc = []
         desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
         view_doc.append(desired_doc)
         doc_text, copyright_notice = get_documents(view_doc, file_path)
-        print("\nHere is the full text of document "+desired_doc+"\n--")
+        print("\nHere is the full text of document " + desired_doc + "\n--")
         print(doc_text)
         print("--\n")
         view_website = "n"
-        input("Would you like to open the website of this document? Type y or n: ")
+        view_website = input("Would you like to open the website of this document? Type y or n: ")
         if view_website == "y":
-            open_url = open_website(desired_doc, file_path)
+            open_url = open_website(view_doc, file_path)
             if open_url == "" or open_url is None:
                 open_url = archive_url
             else:
                 open_url = open_url
-            print("Please find your Safari browser window to view "+open_url)
+            print("Now opening the website in your Safari browser, find the page for " + desired_doc)
+            open_website_command = str("open '/Applications/Safari.app' '" + open_url + "'")
+            os.system(open_website_command)
+            #print("Please find your Safari browser window to view " + open_url)
         else:
             print("Okay, you can retrieve this website again later.")
         view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
@@ -613,7 +642,9 @@ while userresponse != "q":
 
     userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
     if userresponse == "q":
+        print("")
         print(copyright_notice)
+        print("")
         exit()
     else:
         print("Let's continue.\n")
@@ -643,28 +674,27 @@ while userresponse != "q":
         print(conv_context)
         print("--\n")
         view_desired_doc = "n"
-        view_desired_doc = input("Would you like to view any of the referenced documents? y/n: ")
+        view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
         while view_desired_doc != "n":
             view_doc = []
             desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
-            # print(desired_doc)
             view_doc.append(desired_doc)
-            # print(view_doc)
             doc_text, copyright_notice = get_documents(view_doc, file_path)
             print("\nHere is the full text of document " + desired_doc + "\n--")
             print(doc_text)
             print("--\n")
             view_website = "n"
-            input("Would you like to open the website of this document? Type y or n: ")
-            if view_website != "n":
+            view_website = input("Would you like to open the website of this document? Type y or n: ")
+            if view_website == "y":
                 open_url = open_website(view_doc, file_path)
-                if view_website == "y":
-                    open_url = open_website(desired_doc, file_path)
-                    if open_url == "" or open_url is None:
-                        open_url = archive_url
-                    else:
-                        open_url = open_url
-                print("Please find your Safari browser window to view " + open_url)
+                if open_url == "" or open_url is None:
+                    open_url = archive_url
+                else:
+                    open_url = open_url
+                print("Now opening the website in your Safari browser, find the page for " + desired_doc)
+                open_website_command = str("open '/Applications/Safari.app' '" + open_url + "'")
+                os.system(open_website_command)
+                #print("Please find your Safari browser window to view " + open_url)
             else:
                 print("Okay, you can retrieve this website again later.")
             view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
@@ -697,6 +727,7 @@ while userresponse != "q":
 
 print("\nThank you. I hope you found what you were looking for!\n")
 print(copyright_notice)
+print("")
 gc.collect()
 exit()
 
