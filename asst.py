@@ -352,6 +352,31 @@ def get_documents(uniquephotos, file_path):
     #print(query_documents)
     return query_documents, copyright_notice
 
+def get_desired_doc(file_path):
+    view_doc = []
+    desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
+    view_doc.append(desired_doc)
+    doc_text, copyright_notice = get_documents(view_doc, file_path)
+    print("\nHere is the full text of document " + desired_doc + "\n--")
+    print(doc_text)
+    print("--\n")
+    view_website = "n"
+    view_website = input("Would you like to open the website of this document? Type y or n: ")
+    if view_website == "y":
+        open_url = open_website(view_doc, file_path)
+        if open_url == "" or open_url is None:
+            open_url = archive_url
+        else:
+            open_url = open_url
+        print("Now opening the website in your Safari browser, find the page for " + desired_doc)
+        open_website_command = str("open '/Applications/Safari.app' '" + open_url + "'")
+        os.system(open_website_command)
+        #print("Please find your Safari browser window to view " + open_url)
+    else:
+        print("Okay, you can retrieve this website again later.")
+
+
+
 def open_website(uniquephotos, file_path):
     open_url = ""
     page_ref = ""
@@ -447,38 +472,18 @@ def get_general_prompt(file_path):
 
     see_names = input("Would you like to see the names associated with these documents? y or n: ")
     if see_names == "y":
-        print("\nSee names associated with the retrieved documents with page references (add 1 to get right page number)")
+        print("\nSee names associated with the retrieved documents with page references:")
         names_mentioned = get_namesmentioned(uniquephotos)
         for i in names_mentioned:
             print(i)
         view_desired_doc = "n"
         view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
         while view_desired_doc != "n":
-            view_doc = []
-            desired_doc = str(input(
-                "To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
-            view_doc.append(desired_doc)
-            doc_text, copyright_notice = get_documents(view_doc, file_path)
-            print("\nHere is the full text of document " + desired_doc + "\n--")
-            print(doc_text)
-            print("--\n")
-            view_website = "n"
-            view_website = input("Would you like to open the website of this document? Type y or n: ")
-            if view_website == "y":
-                open_url = open_website(view_doc, file_path)
-                if open_url == "" or open_url is None:
-                    open_url = archive_url
-                else:
-                    open_url = open_url
-                print("Now opening the website in your Safari browser, find the page for " + desired_doc)
-                open_website_command = str("open '/Applications/Safari.app' '" + open_url + "'")
-                os.system(open_website_command)
-                #print("Please find your Safari browser window to view " + open_url)
-            else:
-                print("Okay, you can retrieve this website again later.")
+            get_desired_doc(file_path)
             view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
     else:
         print("Okay, you can ask for names again later.")
+
 
     all_query_documents, copyright_notice = get_documents(uniquephotos, file_path)
     return number_retrieved, all_query_documents, general_prompt, copyright_notice
@@ -504,9 +509,11 @@ while userresponse != "q":
     #retrieve full document texts from CSV and string them together into a list of strings that can be entered into LLM context window
     number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt(file_path)
 
-    view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
+    view_docs = input("Would you like to view all the documents matching your general query? Type: y or n: ")
     if view_docs != "n":
+        print("\n--")
         print(all_query_documents)
+        print("--\n")
         print("See the retrieved documents above. \nNow enter a more specific question below or enter a new query.")
     else:
         print("Great. Now enter a more specific question below or enter a new query.")
@@ -518,9 +525,11 @@ while userresponse != "q":
     while redo_general_prompt == "y":
         number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt(file_path)
 
-        view_docs = input("\nWould you like to view the documents matching your general query? Type: y or n: ")
+        view_docs = input("\nWould you like to view all the documents matching your general query? Type: y or n: ")
         if view_docs != "n":
+            print("\n--")
             print(all_query_documents)
+            print("--\n")
             print("See the retrieved documents above.")
             print("You can choose to input a new query term below, by typing y or query this set of documents by typing n below.")
         else:
@@ -595,27 +604,7 @@ while userresponse != "q":
     view_desired_doc = "n"
     view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
     while view_desired_doc != "n":
-        view_doc = []
-        desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
-        view_doc.append(desired_doc)
-        doc_text, copyright_notice = get_documents(view_doc, file_path)
-        print("\nHere is the full text of document " + desired_doc + "\n--")
-        print(doc_text)
-        print("--\n")
-        view_website = "n"
-        view_website = input("Would you like to open the website of this document? Type y or n: ")
-        if view_website == "y":
-            open_url = open_website(view_doc, file_path)
-            if open_url == "" or open_url is None:
-                open_url = archive_url
-            else:
-                open_url = open_url
-            print("Now opening the website in your Safari browser, find the page for " + desired_doc)
-            open_website_command = str("open '/Applications/Safari.app' '" + open_url + "'")
-            os.system(open_website_command)
-            #print("Please find your Safari browser window to view " + open_url)
-        else:
-            print("Okay, you can retrieve this website again later.")
+        get_desired_doc(file_path)
         view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
 
     view_folder = input("Would you like to retrieve all documents in this folder? Type y or n: ")
@@ -662,10 +651,17 @@ while userresponse != "q":
         conv_context = "response"
         prompt = "prompt"
         query_documents = folder_docs
-        view_docs = input("Would you like to view the documents matching your general query? Type: y or n: ")
-        if view_docs != "n":
+        view_docs = input("Would you like to view all the documents matching your general query? Type: y or n: ")
+        if view_docs == "y":
+            print("\nHere is the full text of document " + desired_doc + "\n--")
             print(query_documents)
-            print("See the retrieved documents above. Now enter a more specific question below")
+            print("--\n")
+            print("See the full set of retrieved documents above.")
+            view_desired_doc = "n"
+            view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
+            while view_desired_doc != "n":
+                get_desired_doc(file_path)
+                view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
         else:
             print("Great. Now enter a new question below")
         prompt = topic_query()
@@ -676,27 +672,7 @@ while userresponse != "q":
         view_desired_doc = "n"
         view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
         while view_desired_doc != "n":
-            view_doc = []
-            desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
-            view_doc.append(desired_doc)
-            doc_text, copyright_notice = get_documents(view_doc, file_path)
-            print("\nHere is the full text of document " + desired_doc + "\n--")
-            print(doc_text)
-            print("--\n")
-            view_website = "n"
-            view_website = input("Would you like to open the website of this document? Type y or n: ")
-            if view_website == "y":
-                open_url = open_website(view_doc, file_path)
-                if open_url == "" or open_url is None:
-                    open_url = archive_url
-                else:
-                    open_url = open_url
-                print("Now opening the website in your Safari browser, find the page for " + desired_doc)
-                open_website_command = str("open '/Applications/Safari.app' '" + open_url + "'")
-                os.system(open_website_command)
-                #print("Please find your Safari browser window to view " + open_url)
-            else:
-                print("Okay, you can retrieve this website again later.")
+            get_desired_doc(file_path)
             view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
 
         view_folder = input("Would you like to retrieve all documents in this folder? Type y or n: ")
