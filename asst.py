@@ -116,15 +116,15 @@ elif "phi3-8k" in ollama_models:
     inference_model_window = "8k tokens"
     n_results = 16
     ranked_results = 80
-elif "phi3-14b-12k" in ollama_models:
-    inference_model = "phi3-14b-12k:latest"
-    inference_model_window = "12k tokens"
-    ranked_results = 120
-elif "phi3-16k" in ollama_models:
-    inference_model = "phi3-16k:latest"
-    inference_model_window = "16k tokens"
-    n_results = 25
-    ranked_results = 160
+#elif "phi3-14b-12k" in ollama_models:
+    #inference_model = "phi3-14b-12k:latest"
+    #inference_model_window = "12k tokens"
+    #ranked_results = 120
+#elif "phi3-16k" in ollama_models:
+    #inference_model = "phi3-16k:latest"
+    #inference_model_window = "16k tokens"
+    #n_results = 25
+    #ranked_results = 160
 elif "phi3-12k" in ollama_models:
     inference_model = "phi3-12k:latest"
     inference_model_window = "12k tokens"
@@ -141,8 +141,8 @@ else:
     n_results = 4
     ranked_results = 20
 
-inference_model = "phi3-14b-16k:latest"
-inference_model_window = "16k tokens"
+#inference_model = "phi3-14b-16k:latest"
+#inference_model_window = "16k tokens"
 
 inference_model_short, inference_model_detail = inference_model.split(":")
 
