@@ -74,19 +74,14 @@ context_limiter = 5
 
 
 ollama_models = os.popen("ollama list").read()
-if "phi3-14b-12k" in ollama_models and "phi3-16k" in ollama_models and "phi3-12k" in ollama_models:
+if "phi3-14b-12k" in ollama_models  and "phi3-12k" in ollama_models:
     print("There are two language models available, which one do you want to use?")
-    model_choice = input("For the larger, but slower phi3-14b-12k, type 1: \nFor the smaller but faster phi3-16k, type 2:\n For the smaller model with a smaller context, type 3\nEnter number here: ")
+    model_choice = input("For the larger, but slower phi3-14b-12k, type 1: \n For the smaller model, type 2\nEnter number here: ")
     if model_choice == "1":
         inference_model = "phi3-14b-12k:latest"
         inference_model_window = "12k tokens"
         n_results = 20
         ranked_results = 120
-    elif model_choice == "2":
-        inference_model = "phi3-16k:latest"
-        inference_model_window = "16k tokens"
-        n_results = 30
-        ranked_results = 160
     else:
         inference_model = "phi3-12k:latest"
         inference_model_window = "12k tokens"
