@@ -1,9 +1,10 @@
+#import csv
 import os
 
-print("\n   - - The Airqiv Document Explorer  - -       ")
-print("             - - airqiv.com  - -       ")
-print("- - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
-print("                - - :-) - -         \n")
+print("\n           - - The Airqiv Document Explorer  - -       ")
+print(" - - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
+print("                     - - airqiv.com  - -       ")
+print("                        - - :-) - -         \n")
 print("\nArqiv AI-Assistant Document Explorer")
 print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
@@ -11,15 +12,10 @@ print("\nThis source code is licensed under the BSD2-style license found at http
 print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
 print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
 
-# https://www.reddit.com/r/LangChain/comments/15a447w/chroma_or_faiss/
-# https://python.langchain.com/v0.2/docs/integrations/vectorstores/chroma/
-
 embed_model = "mxbai-embed-large"
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
-#basic_inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
 inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
-large_inference_model = "llama3:instruct"
 inference_model_short, inference_model_detail = inference_model.split(":")
 userresponse = ""
 
@@ -47,7 +43,7 @@ if userresponse == "q":
 else:
     print("Let's continue.\n")
 
-os.system("cd")
+#os.system("cd")
 os.system("pip3 install chromadb")
 print("ChromaDB has been installed. For more information see https://docs.trychroma.com \n")
 os.system("pip3 install ollama")
@@ -58,6 +54,18 @@ os.system("ollama pull " + inference_model)
 print("The basic LLM inference model, "+inference_model+" has been installed. \nFor more information see https://ollama.com/library/"+inference_model_short+".\n")
 
 # functions used
+
+def create_csv(collection):
+    fieldnames = ["FOLDERNAME", "LANGUAGE", "PHOTONAME", "UNIQUEPHOTO", "PHOTOTEXT", "NAMESMENTIONED","COUNTRIESMENTIONED","URL","COPYRIGHT","ARCHIVE","TOPIC","SUBCOLLECTION",]
+    with open(str("all-"+collection+"-documents.csv"), mode="w", newline="") as new_file:
+        all_files = csv.DictWriter(new_file, fieldnames=fieldnames)
+        all_files.writeheader()
+
+def create_folder(archive_collection):
+    os.system("mkdir "+archive_collection)
+
+def create_sub_folder(archive_collection, topic_collection):
+    os.system("mkdir "+archive_collection+"/"+topic_collection)
 
 # These create models (modelfile) with context lengths appropriate to the user's RAM memory
 #https://github.com/ollama/ollama/blob/main/docs/modelfile.md
@@ -90,7 +98,7 @@ PARAMETER stop <|end|>
 PARAMETER stop <|user|>
 PARAMETER stop <|assistant|>
 PARAMETER num_ctx 4096
-PARAMETER repeat_last_n 2048""")
+PARAMETER repeat_last_n 512""")
 
 def create_expanded_model_template ():
     with open("model-template.txt", "w") as file:
@@ -108,8 +116,9 @@ PARAMETER num_ctx 8192
 PARAMETER repeat_last_n 1024""")
 
 def create_large_model_template ():
+    os.system("ollama pull phi3:14b-medium-128k-instruct-q4_K_M")
     with open("model-template.txt", "w") as file:
-        file.write("""FROM phi3:3.8b-mini-128k-instruct-q5_K_M
+        file.write("""FROM phi3:14b-medium-128k-instruct-q4_K_M
 TEMPLATE "{{ if .System }}<|system|>
 {{ .System }}<|end|>
 {{ end }}{{ if .Prompt }}<|user|>
@@ -123,10 +132,9 @@ PARAMETER num_ctx 12288
 PARAMETER repeat_last_n 1536""")
 
 def create_max_model_template ():
-    os.system("ollama pull " + large_inference_model)
-    print("The basic LLM inference model, " + large_inference_model + " has been installed. \nFor more information see https://ollama.com/library/" + inference_model_short + ".\n")
+    os.system("ollama pull phi3:14b-medium-128k-instruct-q4_K_M")
     with open("model-template.txt", "w") as file:
-        file.write("""FROM llama3:instruct
+        file.write("""FROM phi3:14b-medium-128k-instruct-q4_K_M
 TEMPLATE "{{ if .System }}<|system|>
 {{ .System }}<|end|>
 {{ end }}{{ if .Prompt }}<|user|>
@@ -139,7 +147,7 @@ PARAMETER stop <|assistant|>
 PARAMETER num_ctx 16384
 PARAMETER repeat_last_n 2048""")
 
-if ram_memory < 11:
+if ram_memory < 9:
     if os.path.exists("model-template.txt"):
         os.remove("model-template.txt")
         create_small_model_template()
@@ -151,7 +159,7 @@ if ram_memory < 11:
         inference_model_window = "2k tokens"
         os.system("ollama create phi3-2k -f model-template.txt")
         os.system("ollama show --modelfile phi3-2k")
-elif 11<ram_memory<15:
+elif 9<ram_memory<13:
     if os.path.exists("model-template.txt"):
         os.remove("model-template.txt")
         create_med_model_template()
@@ -163,7 +171,7 @@ elif 11<ram_memory<15:
         inference_model_window = "4k tokens"
         os.system("ollama create phi3-4k -f model-template.txt")
         os.system("ollama show --modelfile phi3-4k")
-elif 15<ram_memory<17:
+elif 13<ram_memory<17:
     if os.path.exists("model-template.txt"):
         os.remove("model-template.txt")
         create_expanded_model_template()
@@ -175,30 +183,30 @@ elif 15<ram_memory<17:
         inference_model_window = "8k tokens"
         os.system("ollama create phi3-8k -f model-template.txt")
         os.system("ollama show --modelfile phi3-8k")
-elif 17<ram_memory<29:
+elif 17<ram_memory<25:
     if os.path.exists("model-template.txt"):
         os.remove("model-template.txt")
         create_large_model_template()
         inference_model_window = "12k tokens"
-        os.system("ollama create phi3-12k -f model-template.txt")
-        os.system("ollama show --modelfile phi3-12k")
+        os.system("ollama create phi3-14b-12k -f model-template.txt")
+        os.system("ollama show --modelfile phi3-14b-12k")
     else:
         create_large_model_template()
         inference_model_window = "12k tokens"
-        os.system("ollama create phi3-12k -f model-template.txt")
-        os.system("ollama show --modelfile phi3-12k")
-elif ram_memory > 29:
+        os.system("ollama create phi3-14b-12k -f model-template.txt")
+        os.system("ollama show --modelfile phi3-14b-12k")
+elif ram_memory > 25:
     if os.path.exists("model-template.txt"):
         os.remove("model-template.txt")
         create_max_model_template()
         inference_model_window = "16k tokens"
-        os.system("ollama create llama3-16k -f model-template.txt")
-        os.system("ollama show --modelfile llama3-16k")
+        os.system("ollama create phi3-14b-16k -f model-template.txt")
+        os.system("ollama show --modelfile phi3-14b-16k")
     else:
         create_max_model_template()
         inference_model_window = "16k tokens"
-        os.system("ollama create llama3-16k -f model-template.txt")
-        os.system("ollama show --modelfile llama3-16k")
+        os.system("ollama create phi3-14b-16k -f model-template.txt")
+        os.system("ollama show --modelfile phi3-14b-16k")
 
 
 print("\nThe information above summarizes the inference model we will use to explore the retrieved documents.\n The model allows a context length of " +inference_model_window+ ", which represent words or parts of words. \nDivide tokens by 1.5 to get approximate number of words that the model can analyze in the retrieved documents.\nEach page of these documents contains an average of 350 words, so a 2k model analyzes about 4 pages at a time, and an 8k model about 16 pages.\n")
