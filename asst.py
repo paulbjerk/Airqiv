@@ -63,45 +63,36 @@ general_prompt = "What is the main theme in these documents?"
 open_url = ""
 archive_name =""
 archive_url = ""
+n_results = 15
+ranked_results = 24
 
 
 # a higher context limiter number makes it more likely that the retrieved documents will be chunked and ranked rather than fed in their entirety into the LLM context.
 # the context limiter is a divisor to test the number of retrieved documents against the maximium context length of the LLM
 context_limiter = 5
 
-def create_large_model_template ():
-    #os.system("ollama pull phi3:14b-medium-128k-instruct-q5_K_M")
-    with open("model-template.txt", "w") as file:
-        file.write("""FROM phi3:3.8b-mini-128k-instruct-q5_K_M
-TEMPLATE "{{ if .System }}<|system|>
-{{ .System }}<|end|>
-{{ end }}{{ if .Prompt }}<|user|>
-{{ .Prompt }}<|end|>
-{{ end }}<|assistant|>
-{{ .Response }}<|end|>"
-PARAMETER stop <|end|>
-PARAMETER stop <|user|>
-PARAMETER stop <|assistant|>
-PARAMETER num_ctx 16384
-PARAMETER repeat_last_n 2048""")
 
-if os.path.exists("model-template.txt"):
-    os.remove("model-template.txt")
-    create_large_model_template()
-    inference_model_window = "16k tokens"
-    os.system("ollama create phi3-16k -f model-template.txt")
-    os.system("ollama show --modelfile phi3-16k")
-else:
-    create_large_model_template()
-    inference_model_window = "16k tokens"
-    os.system("ollama create phi3-16k -f model-template.txt")
-    os.system("ollama show --modelfile phi3-16k")
-
-os.remove("model-template.txt")
 
 ollama_models = os.popen("ollama list").read()
-
-if "phi3-2k" in ollama_models:
+if "phi3-14b-12k" in ollama and "phi3-16k" in ollama_models and "phi3-12k" in ollama_models:
+    print("There are two language models available, which one do you want to use?")
+    model_choice = input("For the larger, but slower phi3-14b-12k, type 1: \nFor the smaller but faster phi3-16k, type 2:\n For the smaller model with a smaller context, type 3\nEnter number here: ")
+    if model_choice == "1":
+        inference_model = "phi3-14b-12k"
+        inference_model_window = "12k tokens"
+        n_results = 20
+        ranked_results = 120
+    elif model_choice == "2":
+        inference_model = "phi3-16k"
+        inference_model_window = "16k tokens"
+        n_results = 25
+        ranked_results = 160
+    else:
+        inference_model = "phi3-12k"
+        inference_model_window = "12k tokens"
+        n_results = 20
+        ranked_results = 120
+elif "phi3-2k" in ollama_models:
     inference_model = "phi3-2k:latest"
     inference_model_window = "2k tokens"
     n_results = 4
@@ -116,15 +107,16 @@ elif "phi3-8k" in ollama_models:
     inference_model_window = "8k tokens"
     n_results = 16
     ranked_results = 80
-#elif "phi3-14b-12k" in ollama_models:
-    #inference_model = "phi3-14b-12k:latest"
-    #inference_model_window = "12k tokens"
-    #ranked_results = 120
-#elif "phi3-16k" in ollama_models:
-    #inference_model = "phi3-16k:latest"
-    #inference_model_window = "16k tokens"
-    #n_results = 25
-    #ranked_results = 160
+elif "phi3-14b-12k" in ollama_models:
+    inference_model = "phi3-14b-12k:latest"
+    inference_model_window = "12k tokens"
+    n_results = 20
+    ranked_results = 120
+elif "phi3-16k" in ollama_models:
+    inference_model = "phi3-16k:latest"
+    inference_model_window = "16k tokens"
+    n_results = 25
+    ranked_results = 160
 elif "phi3-12k" in ollama_models:
     inference_model = "phi3-12k:latest"
     inference_model_window = "12k tokens"
@@ -762,7 +754,10 @@ print("")
 gc.collect()
 exit()
 
+
+
 def create_large_model_template ():
+    #os.system("ollama pull phi3:14b-medium-128k-instruct-q5_K_M")
     with open("model-template.txt", "w") as file:
         file.write("""FROM phi3:3.8b-mini-128k-instruct-q5_K_M
 TEMPLATE "{{ if .System }}<|system|>
@@ -774,26 +769,19 @@ TEMPLATE "{{ if .System }}<|system|>
 PARAMETER stop <|end|>
 PARAMETER stop <|user|>
 PARAMETER stop <|assistant|>
-PARAMETER num_ctx 12288
-PARAMETER repeat_last_n 1536""")
+PARAMETER num_ctx 16384
+PARAMETER repeat_last_n 2048""")
 
-#if os.path.exists("model-template.txt"):
-    #os.remove("model-template.txt")
-    #create_large_model_template()
-    #inference_model_window = "12k tokens"
-    #os.system("ollama create phi3-12k -f model-template.txt")
-    #os.system("ollama show --modelfile phi3-12k")
-#else:
-    #create_large_model_template()
-    #inference_model_window = "12k tokens"
-    #os.system("ollama create phi3-12k -f model-template.txt")
-    #os.system("ollama show --modelfile phi3-12k")
+if os.path.exists("model-template.txt"):
+    os.remove("model-template.txt")
+    create_large_model_template()
+    inference_model_window = "16k tokens"
+    os.system("ollama create phi3-16k -f model-template.txt")
+    os.system("ollama show --modelfile phi3-16k")
+else:
+    create_large_model_template()
+    inference_model_window = "16k tokens"
+    os.system("ollama create phi3-16k -f model-template.txt")
+    os.system("ollama show --modelfile phi3-16k")
 
-create_large_model_template()
-inference_model_window = "12k tokens"
-os.system("ollama create phi3-12k -f model-template.txt")
-os.system("ollama show --modelfile phi3-12k")
-# This step looks at the phi3 model installed in setup and sets a few parameters in the asst app to best use the user's system capabilities (RAM)
-
-
-inference_model_short, inference_model_latest = inference_model.split(":")
+os.remove("model-template.txt")
