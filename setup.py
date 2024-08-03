@@ -12,12 +12,16 @@ print("\nThis source code is licensed under the BSD2-style license found at http
 print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
 print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
 
+
 embed_model = "mxbai-embed-large"
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
+#basic_inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
 inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
 inference_model_short, inference_model_detail = inference_model.split(":")
 userresponse = ""
+inference_model_window = ""
+small_inference_model_window = ""
 
 print("\nThis setup process will take 10-15 minutes. You will need a 2020 or later Apple Mac with an M-Series chip. \nIt will install all the needed pieces (dependencies) for running the two apps.\n Before running this, you must first install Ollama from https://ollama.com \n ")
 print("This will install ChromaDB first, and then install two AI language models from Ollama.\n"
@@ -33,6 +37,11 @@ print("Click on the Apple icon in the upper left corner, and click on -- About T
 mac_model = input ("What chip does your Mac have? Type M1 or M2, or M3: ")
 ram_memory_input = input ("How many GB of RAM memory does your Mac have? (type a number): ")
 ram_memory = int(ram_memory_input)
+
+#archive_collection = input("What is the broadest one-word category for these documents? (e.g. the archive abbreviation, or collection name): ")
+#topic_collection = input("If this is a large collection, what is the sub-set of these documents (e.g. the relevant country, theme, topic, individual, case): ")
+#print("You should place the CSVs in nested folders in the ai-assistant folder, the nested folders should follow the one-word broad category and sub-set names entered above")
+
 
 #install chromadb and the underlying chat model (LLM: phi3)
 print("Make sure the above information was entered correctly. \nThis next step will run automatically and take a 5-10 minutes depending on system and internet speed")
@@ -112,8 +121,8 @@ TEMPLATE "{{ if .System }}<|system|>
 PARAMETER stop <|end|>
 PARAMETER stop <|user|>
 PARAMETER stop <|assistant|>
-PARAMETER num_ctx 8192
-PARAMETER repeat_last_n 1024""")
+PARAMETER num_ctx 12288
+PARAMETER repeat_last_n 1536""")
 
 def create_large_model_template ():
     os.system("ollama pull phi3:14b-medium-128k-instruct-q4_K_M")
@@ -175,14 +184,14 @@ elif 13<ram_memory<17:
     if os.path.exists("model-template.txt"):
         os.remove("model-template.txt")
         create_expanded_model_template()
-        inference_model_window = "8k tokens"
-        os.system("ollama create phi3-8k -f model-template.txt")
-        os.system("ollama show --modelfile phi3-8k")
+        inference_model_window = "12k tokens"
+        os.system("ollama create phi3-12k -f model-template.txt")
+        os.system("ollama show --modelfile phi3-12k")
     else:
         create_expanded_model_template()
-        inference_model_window = "8k tokens"
-        os.system("ollama create phi3-8k -f model-template.txt")
-        os.system("ollama show --modelfile phi3-8k")
+        inference_model_window = "12k tokens"
+        os.system("ollama create phi3-12k -f model-template.txt")
+        os.system("ollama show --modelfile phi3-12k")
 elif 17<ram_memory<25:
     if os.path.exists("model-template.txt"):
         os.remove("model-template.txt")
@@ -190,11 +199,33 @@ elif 17<ram_memory<25:
         inference_model_window = "12k tokens"
         os.system("ollama create phi3-14b-12k -f model-template.txt")
         os.system("ollama show --modelfile phi3-14b-12k")
+        if os.path.exists("model-template.txt"):
+            os.remove("model-template.txt")
+            create_expanded_model_template()
+            small_inference_model_window = "12k tokens"
+            os.system("ollama create phi3-12k -f model-template.txt")
+            os.system("ollama show --modelfile phi3-12k")
+        else:
+            create_expanded_model_template()
+            small_inference_model_window = "12k tokens"
+            os.system("ollama create phi3-12k -f model-template.txt")
+            os.system("ollama show --modelfile phi3-12k")
     else:
         create_large_model_template()
         inference_model_window = "12k tokens"
         os.system("ollama create phi3-14b-12k -f model-template.txt")
         os.system("ollama show --modelfile phi3-14b-12k")
+        if os.path.exists("model-template.txt"):
+            os.remove("model-template.txt")
+            small_create_expanded_model_template()
+            inference_model_window = "12k tokens"
+            os.system("ollama create phi3-12k -f model-template.txt")
+            os.system("ollama show --modelfile phi3-12k")
+        else:
+            create_expanded_model_template()
+            small_inference_model_window = "12k tokens"
+            os.system("ollama create phi3-12k -f model-template.txt")
+            os.system("ollama show --modelfile phi3-12k")
 elif ram_memory > 25:
     if os.path.exists("model-template.txt"):
         os.remove("model-template.txt")
@@ -202,14 +233,41 @@ elif ram_memory > 25:
         inference_model_window = "16k tokens"
         os.system("ollama create phi3-14b-16k -f model-template.txt")
         os.system("ollama show --modelfile phi3-14b-16k")
+        if os.path.exists("model-template.txt"):
+            os.remove("model-template.txt")
+            create_expanded_model_template()
+            small_inference_model_window = "12k tokens"
+            os.system("ollama create phi3-12k -f model-template.txt")
+            os.system("ollama show --modelfile phi3-12k")
+        else:
+            create_expanded_model_template()
+            small_inference_model_window = "12k tokens"
+            os.system("ollama create phi3-12k -f model-template.txt")
+            os.system("ollama show --modelfile phi3-12k")
     else:
         create_max_model_template()
         inference_model_window = "16k tokens"
         os.system("ollama create phi3-14b-16k -f model-template.txt")
         os.system("ollama show --modelfile phi3-14b-16k")
-
+        if os.path.exists("model-template.txt"):
+            os.remove("model-template.txt")
+            create_expanded_model_template()
+            small_inference_model_window = "12k tokens"
+            os.system("ollama create phi3-12k -f model-template.txt")
+            os.system("ollama show --modelfile phi3-12k")
+        else:
+            create_expanded_model_template()
+            small_inference_model_window = "12k tokens"
+            os.system("ollama create phi3-12k -f model-template.txt")
+            os.system("ollama show --modelfile phi3-12k")
 
 print("\nThe information above summarizes the inference model we will use to explore the retrieved documents.\n The model allows a context length of " +inference_model_window+ ", which represent words or parts of words. \nDivide tokens by 1.5 to get approximate number of words that the model can analyze in the retrieved documents.\nEach page of these documents contains an average of 350 words, so a 2k model analyzes about 4 pages at a time, and an 8k model about 16 pages.\n")
+if ram_memory > 17:
+    print("The asst.py app will use a phi3 medium (14b) language model with a context window of "+inference_model_window+".")
+    print("A small phi3 mini (3b) language model that might summarize documents more quickly has also been created with "+small_inference_model_window+" for context.")
+    print("The asst.py app will give you a choice as to which model you want to use.")
+else:
+    print("The asst.py app will use a phi3 mini language model with a context window of "+inference_model_window+".")
 
 print("\nNow type python3 ingest.py in order to begin ingesting CSV documents.")
 
