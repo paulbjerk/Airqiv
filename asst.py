@@ -271,7 +271,7 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results,, where={"NAMESMENTIONED": names_wanted})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"NAMESMENTIONED": names_wanted})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
     elif countries_wanted != "no__country__given":
