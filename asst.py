@@ -23,11 +23,19 @@ embed_model_short, embed_model_detail = embed_model.split(":")
 embed_model_author = "Mixed Bread"
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
-inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
+#inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
+#inference_model_short, inference_model_detail = inference_model.split(":")
+inference_model_author = "Microsoft"
+#phi3_model = "2k"
+inference_model_window = "12k tokens"
+inference_model = "phi3-14b-12k:latest"
+#inference_model_short, inference_model_detail = inference_model.split(":")
+#inference_model_author = "Meta"
+#inference_model = "phi3:14b-medium-128k-instruct-q4_K_M"
 inference_model_short, inference_model_detail = inference_model.split(":")
 inference_model_author = "Microsoft"
-phi3_model = "2k"
-inference_model_window = "2k tokens"
+
+
 conv_context = "response"
 prompt = "prompt"
 response = "response"
@@ -61,8 +69,6 @@ archive_url = ""
 # the context limiter is a divisor to test the number of retrieved documents against the maximium context length of the LLM
 context_limiter = 5
 
-
-# This step looks at the phi3 model installed in setup and sets a few parameters in the asst app to best use the user's system capabilities (RAM)
 ollama_models = os.popen("ollama list").read()
 
 if "phi3-2k" in ollama_models:
@@ -77,12 +83,16 @@ elif "phi3-8k" in ollama_models:
     inference_model = "phi3-8k:latest"
     inference_model_window = "8k tokens"
     ranked_results = 80
+elif "phi3-14b-12k" in ollama_models:
+    inference_model = "phi3-14b-12k:latest"
+    inference_model_window = "12k tokens"
+    ranked_results = 120
 elif "phi3-12k" in ollama_models:
     inference_model = "phi3-12k:latest"
     inference_model_window = "12k tokens"
     ranked_results = 120
-elif "llama3-16k" in ollama_models:
-    inference_model = "llama3-16k:latest"
+elif "phi3-14b-16k" in ollama_models:
+    inference_model = "phi3-14b-16k:latest"
     inference_model_window = "16k tokens"
     ranked_results = 160
 else:
@@ -90,7 +100,7 @@ else:
     inference_model_window = "2k tokens"
     ranked_results = 20
 
-inference_model_short, inference_model_latest = inference_model.split(":")
+
 
 print("\nThe " +embed_model_author+" "+embed_model_short+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
 print ("The "+inference_model_author+" "+inference_model_short+" language model has a context window length of "+inference_model_window+".\n")
@@ -416,7 +426,7 @@ def get_namesmentioned(uniquephotos):
 
 # Ollama's basic query-documents function using selected LLM
 # phi3 chat template: <|user|>\nQuestion<|end|>\n<|assistant|>
-def response_generation(data,prompt):
+def response_generation(data,prompt,inference_model):
     #  generate a response combining the prompt and data we retrieved in step 2
     output = ollama.generate(
         model=inference_model,
@@ -596,7 +606,7 @@ while userresponse != "q":
         query_documents = all_query_documents
 
     #print(query_documents)
-    conv_context = response_generation(query_documents, prompt)
+    conv_context = response_generation(query_documents, prompt, inference_model)
     print("\nHere is the AI-Assistant's summary of relevant material from the documents: \n--")
     print(conv_context)
     print("--\n")
@@ -665,7 +675,7 @@ while userresponse != "q":
         else:
             print("Great. Now enter a new question below")
         prompt = topic_query()
-        conv_context = response_generation(query_documents, prompt)
+        conv_context = response_generation(query_documents, prompt, inference_model)
         print("\nHere is the AI-Assistant's summary of relevant material from the documents: \n--")
         print(conv_context)
         print("--\n")
@@ -707,3 +717,38 @@ print("")
 gc.collect()
 exit()
 
+def create_large_model_template ():
+    with open("model-template.txt", "w") as file:
+        file.write("""FROM phi3:3.8b-mini-128k-instruct-q5_K_M
+TEMPLATE "{{ if .System }}<|system|>
+{{ .System }}<|end|>
+{{ end }}{{ if .Prompt }}<|user|>
+{{ .Prompt }}<|end|>
+{{ end }}<|assistant|>
+{{ .Response }}<|end|>"
+PARAMETER stop <|end|>
+PARAMETER stop <|user|>
+PARAMETER stop <|assistant|>
+PARAMETER num_ctx 12288
+PARAMETER repeat_last_n 1536""")
+
+#if os.path.exists("model-template.txt"):
+    #os.remove("model-template.txt")
+    #create_large_model_template()
+    #inference_model_window = "12k tokens"
+    #os.system("ollama create phi3-12k -f model-template.txt")
+    #os.system("ollama show --modelfile phi3-12k")
+#else:
+    #create_large_model_template()
+    #inference_model_window = "12k tokens"
+    #os.system("ollama create phi3-12k -f model-template.txt")
+    #os.system("ollama show --modelfile phi3-12k")
+
+create_large_model_template()
+inference_model_window = "12k tokens"
+os.system("ollama create phi3-12k -f model-template.txt")
+os.system("ollama show --modelfile phi3-12k")
+# This step looks at the phi3 model installed in setup and sets a few parameters in the asst app to best use the user's system capabilities (RAM)
+
+
+inference_model_short, inference_model_latest = inference_model.split(":")
