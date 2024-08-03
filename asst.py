@@ -69,37 +69,82 @@ archive_url = ""
 # the context limiter is a divisor to test the number of retrieved documents against the maximium context length of the LLM
 context_limiter = 5
 
+def create_large_model_template ():
+    #os.system("ollama pull phi3:14b-medium-128k-instruct-q5_K_M")
+    with open("model-template.txt", "w") as file:
+        file.write("""FROM phi3:3.8b-mini-128k-instruct-q5_K_M
+TEMPLATE "{{ if .System }}<|system|>
+{{ .System }}<|end|>
+{{ end }}{{ if .Prompt }}<|user|>
+{{ .Prompt }}<|end|>
+{{ end }}<|assistant|>
+{{ .Response }}<|end|>"
+PARAMETER stop <|end|>
+PARAMETER stop <|user|>
+PARAMETER stop <|assistant|>
+PARAMETER num_ctx 16384
+PARAMETER repeat_last_n 2048""")
+
+if os.path.exists("model-template.txt"):
+    os.remove("model-template.txt")
+    create_large_model_template()
+    inference_model_window = "16k tokens"
+    os.system("ollama create phi3-16k -f model-template.txt")
+    os.system("ollama show --modelfile phi3-16k")
+else:
+    create_large_model_template()
+    inference_model_window = "16k tokens"
+    os.system("ollama create phi3-16k -f model-template.txt")
+    os.system("ollama show --modelfile phi3-16k")
+
+os.remove("model-template.txt")
+
 ollama_models = os.popen("ollama list").read()
 
 if "phi3-2k" in ollama_models:
     inference_model = "phi3-2k:latest"
     inference_model_window = "2k tokens"
+    n_results = 4
     ranked_results = 20
 elif "phi3-4k" in ollama_models:
     inference_model = "phi3-4k:latest"
     inference_model_window = "4k tokens"
+    n_results = 8
     ranked_results = 40
 elif "phi3-8k" in ollama_models:
     inference_model = "phi3-8k:latest"
     inference_model_window = "8k tokens"
+    n_results = 16
     ranked_results = 80
 elif "phi3-14b-12k" in ollama_models:
     inference_model = "phi3-14b-12k:latest"
     inference_model_window = "12k tokens"
     ranked_results = 120
+elif "phi3-16k" in ollama_models:
+    inference_model = "phi3-16k:latest"
+    inference_model_window = "16k tokens"
+    n_results = 25
+    ranked_results = 160
 elif "phi3-12k" in ollama_models:
     inference_model = "phi3-12k:latest"
     inference_model_window = "12k tokens"
+    n_results = 20
     ranked_results = 120
 elif "phi3-14b-16k" in ollama_models:
     inference_model = "phi3-14b-16k:latest"
     inference_model_window = "16k tokens"
+    n_results = 25
     ranked_results = 160
 else:
     inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
     inference_model_window = "2k tokens"
+    n_results = 4
     ranked_results = 20
 
+inference_model = "phi3-14b-16k:latest"
+inference_model_window = "16k tokens"
+
+inference_model_short, inference_model_detail = inference_model.split(":")
 
 
 print("\nThe " +embed_model_author+" "+embed_model_short+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
@@ -230,38 +275,38 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
 
     if names_wanted != "no__name__given":
         if sub_collection != "no__subcollection__given":
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted, "SUBCOLLECTION": sub_collection})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"NAMESMENTIONED": names_wanted, "SUBCOLLECTION": sub_collection})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results,, where={"NAMESMENTIONED": names_wanted})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
     elif countries_wanted != "no__country__given":
         if sub_collection != "no__subcollection__given":
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"COUNTRIESMENTIONED": countries_wanted})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"COUNTRIESMENTIONED": countries_wanted})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
     elif names_wanted != "no__name__given" and countries_wanted != "no__countries__wanted":
         if sub_collection != "no__subcollection__given":
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
     else:
         if sub_collection != "no__subcollection__given":
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15, where={"SUBCOLLECTION": sub_collection})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"SUBCOLLECTION": sub_collection})
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=15)
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results,)
             metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
 
