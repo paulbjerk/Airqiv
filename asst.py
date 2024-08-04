@@ -74,14 +74,19 @@ context_limiter = 5
 
 
 ollama_models = os.popen("ollama list").read()
-if "phi3-14b-12k" in ollama_models  and "phi3-12k" in ollama_models:
+if "phi3-14b-12k" in ollama_models and "phi3-16k" in ollama_models and "phi3-12k" in ollama_models:
     print("There are two language models available, which one do you want to use?")
-    model_choice = input("For the larger, but slower phi3-14b-12k, type 1: \n For the smaller model, type 2\nEnter number here: ")
+    model_choice = input("For the larger, but slower phi3-14b-12k, type 1: \nFor the smaller but faster phi3-16k, type 2:\n For the smaller model with a smaller context, type 3\nEnter number here: ")
     if model_choice == "1":
         inference_model = "phi3-14b-12k:latest"
         inference_model_window = "12k tokens"
         n_results = 20
         ranked_results = 120
+    elif model_choice == "2":
+        inference_model = "phi3-16k:latest"
+        inference_model_window = "16k tokens"
+        n_results = 30
+        ranked_results = 160
     else:
         inference_model = "phi3-12k:latest"
         inference_model_window = "12k tokens"
@@ -152,7 +157,13 @@ print("\nQuery the assistant to explore your documents!")
 desired_collection = input("What collection do you want to explore? \n Enter the archive abbreviation or thematic one-word name only, in lower-case letters. (e.g. nara, lbj, vietnam, tanzania): \n")
 currentingest = str("all-"+desired_collection+"-documents")
 file_path = currentingest+".csv"
-collection = client.get_collection(name=currentingest, embedding_function=ollama_ef)
+if currentingest in [c.name for c in client.list_collections()]:
+    collection = client.get_collection(name=currentingest, embedding_function=ollama_ef)
+else:
+    print("The requested collection does not exist. Please enter it again.")
+    desired_collection = input("What collection do you want to explore? \n Enter the archive abbreviation or thematic one-word name only, in lower-case letters. (e.g. nara, lbj, vietnam, tanzania): \n")
+    currentingest = str("all-" + desired_collection + "-documents")
+    collection = client.get_collection(name=currentingest, embedding_function=ollama_ef)
 
 
 #functions used
