@@ -12,8 +12,11 @@ print("\nThis source code is licensed under the BSD2-style license found at http
 print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
 print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
 
+# https://www.reddit.com/r/LangChain/comments/15a447w/chroma_or_faiss/
+# https://python.langchain.com/v0.2/docs/integrations/vectorstores/chroma/
 
-embed_model = "mxbai-embed-large"
+#embed_model = "mxbai-embed-large"
+embed_model = "snowflake-arctic-embed"
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
 #basic_inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
@@ -53,6 +56,8 @@ else:
     print("Let's continue.\n")
 
 #os.system("cd")
+os.system("pip3 install --upgrade pip")
+print("pip3 has been upgraded to the latest version.\n For more information see https://www.python.org/downloads/macos/ ")
 os.system("pip3 install chromadb")
 print("ChromaDB has been installed. For more information see https://docs.trychroma.com \n")
 os.system("pip3 install ollama")
@@ -61,6 +66,12 @@ os.system("ollama pull "+ embed_model)
 print("The embedding model, "+embed_model+" has been installed. \nFor more information see https://ollama.com/blog/embedding-models \n")
 os.system("ollama pull " + inference_model)
 print("The basic LLM inference model, "+inference_model+" has been installed. \nFor more information see https://ollama.com/library/"+inference_model_short+".\n")
+os.system("pip3 install -U pip setuptools wheel")
+os.system("pip3 install -U 'spacy[apple]'")
+os.system("python3 -m spacy download en_core_web_sm")
+print("spaCy natural language processing functions have been installed.\n for more information see https://spacy.io ")
+
+
 
 # functions used
 
@@ -261,6 +272,13 @@ elif ram_memory > 25:
             os.system("ollama create phi3-12k -f model-template.txt")
             os.system("ollama show --modelfile phi3-12k")
 
+
+#these create starting points for collection CSVs
+#create_csv(archive_collection)
+#create_csv(topic_collection)
+#create_folder(archive_collection)
+#create_sub_folder(archive_collection, topic_collection)
+
 print("\nThe information above summarizes the inference model we will use to explore the retrieved documents.\n The model allows a context length of " +inference_model_window+ ", which represent words or parts of words. \nDivide tokens by 1.5 to get approximate number of words that the model can analyze in the retrieved documents.\nEach page of these documents contains an average of 350 words, so a 2k model analyzes about 4 pages at a time, and an 8k model about 16 pages.\n")
 if ram_memory > 17:
     print("The asst.py app will use a phi3 medium (14b) language model with a context window of "+inference_model_window+".")
@@ -268,6 +286,9 @@ if ram_memory > 17:
     print("The asst.py app will give you a choice as to which model you want to use.")
 else:
     print("The asst.py app will use a phi3 mini language model with a context window of "+inference_model_window+".")
+#print("A folder called "+topic_collection+"has been created inside a folder called "+archive_collection+" in the ai-assistant folder.\nYou should copy CSV files to be ingested here.\n")
+#print("A CSV template called all-"+archive_collection+"-documents.csv has been created.\nIngested documents will be added here together with all documents from this broad collection.\n")
+#print("A CSV template called all-"+topic_collection+"-documents.csv has been created.\nIngested documents will also be added here together with all documents from this topic sub-set collection.\n")
 
 print("\nNow type python3 ingest.py in order to begin ingesting CSV documents.")
 
