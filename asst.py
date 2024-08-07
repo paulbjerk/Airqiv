@@ -5,6 +5,9 @@ import gc
 import chromadb.utils.embedding_functions as embedding_functions
 import os
 from operator import itemgetter
+import numpy as np
+import spacy
+import re
 
 print("\n           - - The Airqiv Document Explorer  - -       ")
 print(" - - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
@@ -13,14 +16,20 @@ print("                        - - :-) - -         \n")
 print("\nArqiv AI-Assistant Document Explorer")
 print("Copyright (c) <2024>, <Paul Bjerk>")
 print("All rights reserved.")
-print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
-print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
+print("This source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
+print("The app leverages open-sourced LLMs using the Ollama app. For more information see https://ollama.com ")
+print("The app leverages a vector database using ChromaDB. For more information see https://docs.trychroma.com ")
+print("The app leverages the spaCy python library, for more information see https://spacy.io ")
+print("I am grateful for the excellent chunking algorithm by Solano Todeschini, published in Towards Data Science Jul 20, 2023.\n(See https://towardsdatascience.com/how-to-chunk-text-data-a-comparative-analysis-3858c4a0997a ) ")
 print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
 #general variables
 #embed_model = "snowflake-arctic-embed:335m"
-embed_model = "mxbai-embed-large:latest"
+embed_model = "snowflake-arctic-embed:latest"
+embed_model_author = "Snowflake"
+nlp = spacy.load('en_core_web_sm')
+#embed_model = "mxbai-embed-large:latest"
+#embed_model_author = "Mixed Bread"
 embed_model_short, embed_model_detail = embed_model.split(":")
-embed_model_author = "Mixed Bread"
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
 #inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
@@ -33,7 +42,6 @@ inference_model = "phi3-14b-12k:latest"
 #inference_model_author = "Meta"
 #inference_model = "phi3:14b-medium-128k-instruct-q4_K_M"
 inference_model_short, inference_model_detail = inference_model.split(":")
-inference_model_author = "Microsoft"
 
 
 conv_context = "response"
@@ -50,7 +58,7 @@ folder_docs =[]
 clear_context = "/clear"
 end_subprocess = "/bye"
 metadata_key = ["UNIQUEPHOTO"]
-query_chunk_length = 100
+query_chunk_length = 50
 currentingest = "foldertitle"
 hnsw_space = "ip"
 prompt = f"You are a history professor. Answer the following question by designating one or more documents that contain relevant information. The documents are identified by a UNIQUEPHOTO: name."
@@ -172,14 +180,16 @@ else:
 def first_query():
     user_question_1 = input("AI-Assistant: What do you want to know about? \nUser: ")
     sentencesneeded = input("AI-Assistant: How many sentences do you want in the answer? \nUser: ")
-    prompt = f"You are a history professor. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n Answer the following question by designating one or more UNIQUEPHOTO documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    prompt = f"You are a history professor able to read documents and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    #"Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n"
     return prompt
 
 # topic query is used to follow up with the retrieved documents or a user-selected folder of relevant documents
 def topic_query():
     user_question_1 = input("AI-Assistant: What else do you want to ask about this topic? \nUser: ")
     sentencesneeded = input("AI-Assistant: How many sentences do you want in the answer (1-9)? \nUser: ")
-    prompt = f"You are a history professor. Each document is a JSON with two associated key terms UNIQUEPHOTO and PHOTOTEXT. PHOTOTEXT is the text of the document identified by the UNIQUEPHOTO value. Please state the UNIQUEPHOTO value for every statement. Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n Answer the following question by designating one or more UNIQUEPHOTO documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    prompt = f"You are a history professor able to read documents and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    #"Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n"
     return prompt
 
 #list metadatas compiles a list (without duplicates) of all uniquephoto identifiers of documents found in previous steps
@@ -385,7 +395,7 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
         #ranked_doc = {"UNIQUEPHOTO": chunk_image_ref, "PHOTOTEXT": chunk_text}
         #ranked_docs.append(ranked_doc)
     client.delete_collection(name="temp_collection")
-    return ranked_docs
+    return ranked_docs, uniquephotos
 
 #using the return from the retrieve documents, get documents returns a set of full-text documents, not just chunks
 def get_documents(uniquephotos, file_path):
@@ -405,14 +415,35 @@ def get_documents(uniquephotos, file_path):
     #print(query_documents)
     return query_documents, copyright_notice
 
+def get_cited_documents(desired_quote, file_path):
+    all_metadatas = []
+    retrieved_documents = collection.get(ids=[], where_document={"$contains": desired_quote})
+    metadata_in_list = retrieved_documents["metadatas"]
+    retrieved_docs_metadata_list = metadata_in_list
+    for item in retrieved_docs_metadata_list:
+        all_metadatas.append(item)
+    uniquephotos = list_metadata(all_metadatas, metadata_key)
+    query_documents = get_documents(uniquephotos, file_path)
+    # print(uniquephotos)
+    # return uniquephotos, user_term_1, names_wanted, countries_wanted
+    return query_documents
+
 def get_desired_doc(file_path):
     view_doc = []
     desired_doc = str(input("To view the original text of one designated document,\n cut and paste the UNIQUEPHOTO name here, or just enter n to continue: "))
     view_doc.append(desired_doc)
     doc_text, copyright_notice = get_documents(view_doc, file_path)
+    #clean_doc = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s', ' ', doc_text)
+
     print("\nHere is the full text of document " + desired_doc + "\n--")
     print(doc_text)
     print("--\n")
+    cited_information = input("Does this document contain the information cited in the AI summary? Type y or n: ")
+    while cited_information == "n":
+        desired_quote = input("Paste a distinctive quote from the passage here, and we can search for it: ")
+        cited_doc = get_cited_documents(desired_quote, file_path)
+        print(cited_doc)
+        cited_information = input("Would you like to search again for the cited information? Type y or n: ")
     view_website = "n"
     view_website = input("Would you like to open the website of this document? Type y or n: ")
     if view_website == "y":
@@ -481,10 +512,97 @@ def response_generation(data,prompt,inference_model):
 
 #This simple chunker just splits up s text into chunks of n length
 # the chunker could be improved with overlapping chunks and some recursive techniques for smarter chunking
-def chunker (s, n):
+#def chunker (s, n):
+    #"""Produce `n`-character chunks from `s`."""
+    #for start in range(0, len(s), n):
+        #yield s[start:start+n]
+
+#Text Processing: Each text chunk is passed to the process function. This function uses the SpaCy library to create sentence embeddings, which are used to represent the semantic meaning of each sentence in the text chunk.
+def process(text):
+    doc = nlp(text)
+    sents = list(doc.sents)
+    vecs = np.stack([sent.vector / sent.vector_norm for sent in sents])
+    return sents, vecs
+
+def cluster_text(sents, vecs, threshold):
+    clusters = [[0]]
+    for i in range(1, len(sents)):
+        if np.dot(vecs[i], vecs[i - 1]) < threshold:
+            clusters.append([])
+        clusters[-1].append(i)
+    return clusters
+
+def clean_text(text):
+    # Add your text cleaning process here
+    return text
+
+def average_elements(lst):
+    if len(lst) !=0:
+        avg = sum(lst) / len(lst)
+    else:
+        avg = sum(lst) / 1
+
+    return int(avg)
+
+def chunker (phototext,chunk_length):
     """Produce `n`-character chunks from `s`."""
-    for start in range(0, len(s), n):
-        yield s[start:start+n]
+    # Initialize the clusters lengths list and final texts list
+    clusters_lens = []
+    final_texts = []
+    text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s', ' ', phototext)
+
+    # If the cosine similarity is less than a specified threshold, a new cluster begins.
+    threshold = 0.3
+
+    # Process the chunk
+    # This function uses the SpaCy library to create sentence embeddings,
+    # which are used to represent the semantic meaning of each sentence in the text chunk.
+    sents, vecs = process(text)
+
+    # Cluster the sentences
+    # The cluster_text function forms clusters of sentences based on the cosine similarity of their embeddings.
+    # If the cosine similarity is less than a specified threshold, a new cluster begins.
+    clusters = cluster_text(sents, vecs, threshold)
+
+    for cluster in clusters:
+        cluster_txt = clean_text(' '.join([sents[i].text for i in cluster]))
+        cluster_len = len(cluster_txt)
+
+        # Length Check: The code then checks the length of each cluster.
+        # If a cluster is too short (less than 60 characters) or too long (more than 3000 characters),
+        # the threshold is adjusted and the process repeats for that particular cluster until an acceptable length is achieved.
+        # Check if the cluster is too short
+        if cluster_len < chunk_length:
+            continue
+
+        # Check if the cluster is too long
+        elif cluster_len > 1000:
+            threshold = 0.4
+            sents_div, vecs_div = process(cluster_txt)
+            reclusters = cluster_text(sents_div, vecs_div, threshold)
+
+            for subcluster in reclusters:
+                div_txt = clean_text(' '.join([sents_div[i].text for i in subcluster]))
+                div_len = len(div_txt)
+
+                if div_len < chunk_length or div_len > 1000:
+                    continue
+
+                clusters_lens.append(div_len)
+                final_texts.append(div_txt)
+
+        else:
+            clusters_lens.append(cluster_len)
+            final_texts.append(cluster_txt)
+
+    avg_cluster_len = int(average_elements(clusters_lens))
+    number_of_clusters = int(len(final_texts))
+    total_chars = avg_cluster_len * number_of_clusters
+    #print(final_texts)
+    #print(clusters_lens)
+    #print("There are "+str(total_chars)+" characters split into " + str(number_of_clusters) + " clusters in this PHOTOTEXT, averaging "+str(avg_cluster_len)+" characters per cluster.")
+
+    return final_texts
 
 
 #the get folder function allows the user to request the entire enclosing collection of a single document
@@ -504,7 +622,8 @@ def get_folder(folder_contents):
         return sorted_query_documents
 
 def get_general_prompt(file_path):
-    general_prompt = input("AI-Assistant: What is the general topic you want to know about? \nUser: ")
+    initial_prompt = input("AI-Assistant: What is the general topic you want to know about? \nUser: ")
+    general_prompt = ("Represent this sentence for searching relevant passages: "+initial_prompt)
     user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here. \nUser: ")
     names_wanted = input("To LIMIT the number of retrieved documents to those authored by (or associated with) a single name, provide ONE name. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed name delimiter here. \nUser: ")
     countries_wanted = input("To LIMIT the number of retrieved documents to those associated with a single country, provide ONE country. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed country delimiter here. \nUser: ")
@@ -529,7 +648,7 @@ def get_general_prompt(file_path):
         names_mentioned = get_namesmentioned(uniquephotos)
         for i in names_mentioned:
             print(i)
-        view_desired_doc = "n"
+        #view_desired_doc = "n"
         view_desired_doc = input("\nWould you like to view any of the referenced documents? y/n: ")
         while view_desired_doc != "n":
             get_desired_doc(file_path)
@@ -539,7 +658,7 @@ def get_general_prompt(file_path):
 
 
     all_query_documents, copyright_notice = get_documents(uniquephotos, file_path)
-    return number_retrieved, all_query_documents, general_prompt, copyright_notice
+    return number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos
 
 # Here is where the main program starts
 
@@ -560,7 +679,7 @@ while userresponse != "q":
         os.system("ollama run " + inference_model)
 
     #retrieve full document texts from CSV and string them together into a list of strings that can be entered into LLM context window
-    number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt(file_path)
+    number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos = get_general_prompt(file_path)
 
     view_docs = input("Would you like to view all the documents matching your general query? Type: y or n: ")
     if view_docs != "n":
@@ -576,7 +695,7 @@ while userresponse != "q":
 
 #this inner loop allows the user to request a different set of documents
     while redo_general_prompt == "y":
-        number_retrieved, all_query_documents, general_prompt, copyright_notice = get_general_prompt(file_path)
+        number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos = get_general_prompt(file_path)
 
         view_docs = input("\nWould you like to view all the documents matching your general query? Type: y or n: ")
         if view_docs != "n":
@@ -644,7 +763,7 @@ while userresponse != "q":
     prompt = first_query()
 
     if number_retrieved > int(ranked_results/context_limiter):
-        query_documents = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
+        query_documents, uniquephotos = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
     else:
         query_documents = all_query_documents
 
@@ -673,9 +792,10 @@ while userresponse != "q":
         print("See contents of folder above. There are " + str(folder_length) + " pages in this folder.\n")
         conv_continue = input("\nWould you like to ask questions about the contents of this folder? y/n: ")
         if folder_length > ranked_results / context_limiter:
-            folder_docs = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
+            folder_docs, uniquephotos = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
         else:
             folder_docs = folder_docs
+
     else:
         folder_docs = query_documents
         print("We'll continue asking questions of the originally retrieved documents.\n")
@@ -741,7 +861,7 @@ while userresponse != "q":
             print("See contents of folder above. There are " + str(folder_length) + " pages in this folder.\n")
             conv_continue = input("\nWould you like to ask questions about the contents of this folder? y/n: ")
             if folder_length > ranked_results / context_limiter:
-                folder_docs = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
+                folder_docs, uniquephotos = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
             else:
                 folder_docs = folder_docs
         else:
