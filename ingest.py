@@ -4,25 +4,38 @@ import csv
 import gc
 import chromadb.utils.embedding_functions as embedding_functions
 import os
-import re
 import statistics
 from statistics import mode
+import numpy as np
+import spacy
+import re
 
+# see documentation of spaCy Python library: https://spacy.io/usage/spacy-101
+#See this post on how to use spaCy for chunking:
+#https://towardsdatascience.com/how-to-chunk-text-data-a-comparative-analysis-3858c4a0997a
+#see code sample from above post at bottom, under exit
+
+print("\nArqiv AI-Assistant Document Explorer")
+print("This source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
+print("The app leverages open-sourced LLMs using the Ollama app. For more information see https://ollama.com ")
+print("The app leverages a vector database using ChromaDB. For more information see https://docs.trychroma.com ")
+print("The app leverages the spaCy python library, for more information see https://spacy.io ")
+print("I am grateful for the excellent chunking algorithm by Solano Todeschini, published in Towards Data Science Jul 20, 2023.\n(See https://towardsdatascience.com/how-to-chunk-text-data-a-comparative-analysis-3858c4a0997a ) ")
+print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
+
+print("Copyright (c) <2024>, <Paul Bjerk>")
+print("All rights reserved.")
+print("This source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
 print("\n           - - The Airqiv Document Explorer  - -       ")
 print(" - - Artificially Intelligent Retrieval Query Interpretive Visualizer - -")
 print("                     - - airqiv.com  - -       ")
 print("                        - - :-) - -         \n")
-print("\nArqiv AI-Assistant Document Explorer")
-print("Copyright (c) <2024>, <Paul Bjerk>")
-print("All rights reserved.")
-print("\nThis source code is licensed under the BSD2-style license found at https://opensource.org/license/bsd-2-clause .\n")
-print("The app leverages open-sourced LLMs using the Ollama app and a vector database using ChromaDB")
-print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
-
 
 # HNSW space affects the discovery of documents in chromadb
 hnsw_space = "ip"
-embed_model = "mxbai-embed-large"
+#embed_model = "mxbai-embed-large:latest"
+embed_model = "snowflake-arctic-embed:latest"
+nlp = spacy.load('en_core_web_sm')
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
 #embed_model = "snowflake-arctic-embed:335m"
@@ -37,13 +50,15 @@ metadatas = []
 ids = []
 clean_list =[]
 doc_chunks = []
-chunk_length = 500
+chunk_length = 150
 archive_collection = ""
 topic_collection = ""
 sub_collecction = ""
 user_choice = ""
 batch_ingest = ""
 csv_suffix = ".csv"
+
+
 
 #This establishes an Ollama embedding model for Chromadb processes
 ollama_ef = embedding_functions.OllamaEmbeddingFunction(
@@ -111,6 +126,9 @@ def add_new_documents(file_path, collection, archive_collection, topic_collectio
         next(current, None)
         all_files = csv.DictWriter(new_file, fieldnames=fieldnames)
         for row in current:
+            phototext = row["PHOTOTEXT"]
+            text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s', ' ', phototext)
+            row["PHOTOTEXT"] = text
             row["COPYRIGHT"] = copyright
             #row["URL"] = archive_url
             row["ARCHIVE"] = archive_collection
@@ -133,10 +151,97 @@ def create_sub_folder(archive_collection, topic_collection):
 
 #this is a very simple chunker s is the text to chunk and n is the number of characters per chunk
 # this could be improved with overlapping chunks and some recursive techniques for better semantic chunks
-def chunker (s, n):
+#def chunker (phototext, chunk_length):
+    #"""Produce `n`-character chunks from `s`."""
+    #for start in range(0, len(s), n):
+        #yield s[start:start+n]
+
+#Text Processing: Each text chunk is passed to the process function. This function uses the SpaCy library to create sentence embeddings, which are used to represent the semantic meaning of each sentence in the text chunk.
+def process(text):
+    doc = nlp(text)
+    sents = list(doc.sents)
+    vecs = np.stack([sent.vector / sent.vector_norm for sent in sents])
+    return sents, vecs
+
+def cluster_text(sents, vecs, threshold):
+    clusters = [[0]]
+    for i in range(1, len(sents)):
+        if np.dot(vecs[i], vecs[i - 1]) < threshold:
+            clusters.append([])
+        clusters[-1].append(i)
+    return clusters
+
+def clean_text(text):
+    # Add your text cleaning process here
+    return text
+
+def average_elements(lst):
+    if len(lst) !=0:
+        avg = sum(lst) / len(lst)
+    else:
+        avg = sum(lst) / 1
+
+    return int(avg)
+
+def chunker (phototext,chunk_length):
     """Produce `n`-character chunks from `s`."""
-    for start in range(0, len(s), n):
-        yield s[start:start+n]
+    # Initialize the clusters lengths list and final texts list
+    clusters_lens = []
+    final_texts = []
+    text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s', ' ', phototext)
+
+    # If the cosine similarity is less than a specified threshold, a new cluster begins.
+    threshold = 0.3
+
+    # Process the chunk
+    # This function uses the SpaCy library to create sentence embeddings,
+    # which are used to represent the semantic meaning of each sentence in the text chunk.
+    sents, vecs = process(text)
+
+    # Cluster the sentences
+    # The cluster_text function forms clusters of sentences based on the cosine similarity of their embeddings.
+    # If the cosine similarity is less than a specified threshold, a new cluster begins.
+    clusters = cluster_text(sents, vecs, threshold)
+
+    for cluster in clusters:
+        cluster_txt = clean_text(' '.join([sents[i].text for i in cluster]))
+        cluster_len = len(cluster_txt)
+
+        # Length Check: The code then checks the length of each cluster.
+        # If a cluster is too short (less than 60 characters) or too long (more than 3000 characters),
+        # the threshold is adjusted and the process repeats for that particular cluster until an acceptable length is achieved.
+        # Check if the cluster is too short
+        if cluster_len < chunk_length:
+            continue
+
+        # Check if the cluster is too long
+        elif cluster_len > 1000:
+            threshold = 0.4
+            sents_div, vecs_div = process(cluster_txt)
+            reclusters = cluster_text(sents_div, vecs_div, threshold)
+
+            for subcluster in reclusters:
+                div_txt = clean_text(' '.join([sents_div[i].text for i in subcluster]))
+                div_len = len(div_txt)
+
+                if div_len < chunk_length or div_len > 1000:
+                    continue
+
+                clusters_lens.append(div_len)
+                final_texts.append(div_txt)
+
+        else:
+            clusters_lens.append(cluster_len)
+            final_texts.append(cluster_txt)
+
+    avg_cluster_len = int(average_elements(clusters_lens))
+    number_of_clusters = int(len(final_texts))
+    total_chars = avg_cluster_len * number_of_clusters
+    #print(final_texts)
+    #print(clusters_lens)
+    #print("There are "+str(total_chars)+" characters split into " + str(number_of_clusters) + " clusters in this PHOTOTEXT, averaging "+str(avg_cluster_len)+" characters per cluster.")
+
+    return final_texts
 
 def most_frequent(incoming_string):
     clean_string = incoming_string.replace(";", ",")
@@ -271,6 +376,7 @@ def enter_ingestfile():
 
     return batch_ingest, archive_collection, topic_collection, sub_collection, currentingest
 
+
 print("\nThis ingest process is slow if you have a lot of documents. It  turns them into machine-readable vectors.\n You should plan on about 150 kilobytes of hard drive storage per page of ingested documents.\n")
 print("The " +embed_model+ " vector embedding model has "+embed_model_dimensions+ " dimensions and "+embed_model_layers+" layers. \n  The chosen hnsw space calculation is Inner Product or ip.\n ")
 
@@ -373,3 +479,110 @@ print( "\nTo explore the newly loaded documents, type - python3 asst.py - \n and
 
 
 exit()
+
+"""
+import numpy as np
+import spacy
+
+# Load the Spacy model
+nlp = spacy.load('en_core_web_sm')
+
+
+def process(text):
+    doc = nlp(text)
+    sents = list(doc.sents)
+    vecs = np.stack([sent.vector / sent.vector_norm for sent in sents])
+
+    return sents, vecs
+
+
+def cluster_text(sents, vecs, threshold):
+    clusters = [[0]]
+    for i in range(1, len(sents)):
+        if np.dot(vecs[i], vecs[i - 1]) < threshold:
+            clusters.append([])
+        clusters[-1].append(i)
+
+    return clusters
+
+
+def clean_text(text):
+    # Add your text cleaning process here
+    return text
+
+
+# Initialize the clusters lengths list and final texts list
+clusters_lens = []
+final_texts = []
+
+# Process the chunk
+threshold = 0.3
+sents, vecs = process(text)
+
+# Cluster the sentences
+clusters = cluster_text(sents, vecs, threshold)
+
+for cluster in clusters:
+    cluster_txt = clean_text(' '.join([sents[i].text for i in cluster]))
+    cluster_len = len(cluster_txt)
+
+    # Check if the cluster is too short
+    if cluster_len < 60:
+        continue
+
+    # Check if the cluster is too long
+    elif cluster_len > 3000:
+        threshold = 0.6
+        sents_div, vecs_div = process(cluster_txt)
+        reclusters = cluster_text(sents_div, vecs_div, threshold)
+
+        for subcluster in reclusters:
+            div_txt = clean_text(' '.join([sents_div[i].text for i in subcluster]))
+            div_len = len(div_txt)
+
+            if div_len < 60 or div_len > 3000:
+                continue
+
+            clusters_lens.append(div_len)
+            final_texts.append(div_txt)
+
+    else:
+        clusters_lens.append(cluster_len)
+        final_texts.append(cluster_txt)
+
+exit()
+
+"""
+
+def create_embed_template ():
+    #os.system("ollama pull phi3:14b-medium-128k-instruct-q5_K_M")
+    with open("model-template.txt", "w") as file:
+        file.write("""FROM mxbai-embed-large:latest
+TEMPLATE "{{ if .System }}<|system|>
+{{ .System }}<|end|>
+{{ end }}{{ if .Prompt }}<|user|>
+{{ .Prompt }}<|end|>
+{{ end }}<|assistant|>
+{{ .Response }}<|end|>"
+PARAMETER stop <|end|>
+PARAMETER stop <|user|>
+PARAMETER stop <|assistant|>
+PARAMETER num_ctx 1024
+PARAMETER repeat_last_n 2048""")
+
+"""
+if os.path.exists("model-template.txt"):
+    os.remove("model-template.txt")
+    create_large_model_template()
+    inference_model_window = "16k tokens"
+    os.system("ollama create phi3-16k -f model-template.txt")
+    os.system("ollama show --modelfile phi3-16k")
+else:
+    create_large_model_template()
+    inference_model_window = "16k tokens"
+    os.system("ollama create phi3-16k -f model-template.txt")
+    os.system("ollama show --modelfile phi3-16k")
+
+os.remove("model-template.txt")
+
+"""
