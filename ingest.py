@@ -565,37 +565,3 @@ for cluster in clusters:
 
 exit()
 
-"""
-
-def create_embed_template ():
-    #os.system("ollama pull phi3:14b-medium-128k-instruct-q5_K_M")
-    with open("model-template.txt", "w") as file:
-        file.write("""FROM mxbai-embed-large:latest
-TEMPLATE "{{ if .System }}<|system|>
-{{ .System }}<|end|>
-{{ end }}{{ if .Prompt }}<|user|>
-{{ .Prompt }}<|end|>
-{{ end }}<|assistant|>
-{{ .Response }}<|end|>"
-PARAMETER stop <|end|>
-PARAMETER stop <|user|>
-PARAMETER stop <|assistant|>
-PARAMETER num_ctx 1024
-PARAMETER repeat_last_n 2048""")
-
-"""
-if os.path.exists("model-template.txt"):
-    os.remove("model-template.txt")
-    create_large_model_template()
-    inference_model_window = "16k tokens"
-    os.system("ollama create phi3-16k -f model-template.txt")
-    os.system("ollama show --modelfile phi3-16k")
-else:
-    create_large_model_template()
-    inference_model_window = "16k tokens"
-    os.system("ollama create phi3-16k -f model-template.txt")
-    os.system("ollama show --modelfile phi3-16k")
-
-os.remove("model-template.txt")
-
-"""
