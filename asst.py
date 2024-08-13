@@ -25,6 +25,7 @@ print("\n The documents returned and summarized by this Document Explorer are co
 #general variables
 #embed_model = "snowflake-arctic-embed:335m"
 embed_model = "snowflake-arctic-embed:latest"
+quick_embed_model = "snowflake-arctic-embed:latest"
 embed_model_author = "Snowflake"
 nlp = spacy.load('en_core_web_sm')
 #embed_model = "mxbai-embed-large:latest"
@@ -32,12 +33,13 @@ nlp = spacy.load('en_core_web_sm')
 embed_model_short, embed_model_detail = embed_model.split(":")
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
-#inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
-#inference_model_short, inference_model_detail = inference_model.split(":")
+inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
 inference_model_author = "Microsoft"
+#inference_model_author = "Google"
 #phi3_model = "2k"
-inference_model_window = "12k tokens"
-inference_model = "phi3-14b-12k:latest"
+inference_model_window = "8k tokens"
+#inference_model = "gemma-8k:latest"
+#inference_model = "phi3-14b-12k:latest"
 #inference_model_short, inference_model_detail = inference_model.split(":")
 #inference_model_author = "Meta"
 #inference_model = "phi3:14b-medium-128k-instruct-q4_K_M"
@@ -71,78 +73,80 @@ general_prompt = "What is the main theme in these documents?"
 open_url = ""
 archive_name =""
 archive_url = ""
-n_results = 15
-ranked_results = 24
-
+n_results = 30
+ranked_results = 8
+context_limiter = 1
 
 # a higher context limiter number makes it more likely that the retrieved documents will be chunked and ranked rather than fed in their entirety into the LLM context.
 # the context limiter is a divisor to test the number of retrieved documents against the maximium context length of the LLM
-context_limiter = 5
+
 
 
 
 ollama_models = os.popen("ollama list").read()
-if "phi3-14b-12k" in ollama_models and "phi3-16k" in ollama_models and "phi3-12k" in ollama_models:
+if "phi3-14b-12k" in ollama_models and "phi3-16k" in ollama_models and "phi3-8k" in ollama_models:
     print("There are two language models available, which one do you want to use?")
     model_choice = input("For the larger, but slower phi3-14b-12k, type 1: \nFor the smaller but faster phi3-16k, type 2:\n For the smaller model with a smaller context, type 3\nEnter number here: ")
     if model_choice == "1":
         inference_model = "phi3-14b-12k:latest"
         inference_model_window = "12k tokens"
-        n_results = 20
-        ranked_results = 120
+        n_results = 30
+        ranked_results = 12
     elif model_choice == "2":
         inference_model = "phi3-16k:latest"
         inference_model_window = "16k tokens"
-        n_results = 30
-        ranked_results = 160
+        n_results = 40
+        ranked_results = 16
     else:
-        inference_model = "phi3-12k:latest"
-        inference_model_window = "12k tokens"
-        n_results = 20
-        ranked_results = 120
+        inference_model = "phi3-8k:latest"
+        inference_model_window = "8k tokens"
+        n_results = 30
+        ranked_results = 8
 elif "phi3-2k" in ollama_models:
     inference_model = "phi3-2k:latest"
     inference_model_window = "2k tokens"
-    n_results = 4
-    ranked_results = 20
+    n_results = 10
+    ranked_results = 2
 elif "phi3-4k" in ollama_models:
     inference_model = "phi3-4k:latest"
     inference_model_window = "4k tokens"
-    n_results = 8
-    ranked_results = 40
+    n_results = 20
+    ranked_results = 4
 elif "phi3-8k" in ollama_models:
     inference_model = "phi3-8k:latest"
     inference_model_window = "8k tokens"
-    n_results = 16
-    ranked_results = 80
+    n_results = 30
+    ranked_results = 8
 elif "phi3-14b-12k" in ollama_models:
     inference_model = "phi3-14b-12k:latest"
     inference_model_window = "12k tokens"
-    n_results = 20
-    ranked_results = 120
+    n_results = 40
+    ranked_results = 12
 elif "phi3-16k" in ollama_models:
     inference_model = "phi3-16k:latest"
     inference_model_window = "16k tokens"
-    n_results = 30
-    ranked_results = 160
+    n_results = 40
+    ranked_results = 16
 elif "phi3-12k" in ollama_models:
     inference_model = "phi3-12k:latest"
     inference_model_window = "12k tokens"
     n_results = 20
-    ranked_results = 120
+    ranked_results = 12
 elif "phi3-14b-16k" in ollama_models:
     inference_model = "phi3-14b-16k:latest"
     inference_model_window = "16k tokens"
-    n_results = 30
-    ranked_results = 160
+    n_results = 80
+    ranked_results = 16
 else:
     inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
     inference_model_window = "2k tokens"
-    n_results = 4
-    ranked_results = 20
+    n_results = 10
+    ranked_results = 2
+
 
 #inference_model = "phi3-14b-16k:latest"
 #inference_model_window = "16k tokens"
+
 
 inference_model_short, inference_model_detail = inference_model.split(":")
 
@@ -177,18 +181,37 @@ else:
 #functions used
 
 # first user prompt is to ask question of the initially retrieved documents
-def first_query():
+def first_query(desired_collection):
     user_question_1 = input("AI-Assistant: What do you want to know about? \nUser: ")
     sentencesneeded = input("AI-Assistant: How many sentences do you want in the answer? \nUser: ")
-    prompt = f"You are a history professor able to read documents and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    prompt = f"You are a history professor able to read documents from a collection related to "+desired_collection+" and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
     #"Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n"
     return prompt
 
 # topic query is used to follow up with the retrieved documents or a user-selected folder of relevant documents
-def topic_query():
+def topic_query(desired_collection):
     user_question_1 = input("AI-Assistant: What else do you want to ask about this topic? \nUser: ")
     sentencesneeded = input("AI-Assistant: How many sentences do you want in the answer (1-9)? \nUser: ")
-    prompt = f"You are a history professor able to read documents and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    if sentencesneeded == "1":
+        sentencesneeded = "one"
+    elif sentencesneeded == "2":
+        sentencesneeded = "two"
+    elif sentencesneeded == "3":
+        sentencesneeded = "three"
+    elif sentencesneeded == "4":
+        sentencesneeded = "four"
+    elif sentencesneeded == "5":
+        sentencesneeded = "five"
+    elif sentencesneeded == "6":
+        sentencesneeded = "six"
+    elif sentencesneeded == "7":
+        sentencesneeded = "seven"
+    elif sentencesneeded == "8":
+        sentencesneeded = "eight"
+    elif sentencesneeded == "9":
+        sentencesneeded = "nine"
+
+    prompt = f"You are a history professor able to read documents from a collection related to "+desired_collection+" and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
     #"Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n"
     return prompt
 
@@ -210,6 +233,7 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
     #first step retrieves relevant chunks via embeddings that match the query embedding
     all_metadatas = []
     retrieved_chunks =[]
+    all_chunks= []
 
     # these serve as error handling, so that if someone doesn't have a specific search term it doesn't return an error or a huge number of irrelevant documents
     if names_wanted =="":
@@ -280,64 +304,271 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
     else:
         sub_collection = sub_collection
 
-
+    ids_list = []
+    chunks_list = []
+    metadata_in_list = []
     if names_wanted != "no__name__given":
         if sub_collection != "no__subcollection__given":
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"NAMESMENTIONED": names_wanted, "SUBCOLLECTION": sub_collection})
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, n_results=n_results, where={"NAMESMENTIONED": names_wanted, "SUBCOLLECTION": sub_collection})
+            ids_in_list = retrieved_chunks["ids"]
             metadata_in_list = retrieved_chunks["metadatas"]
-            chunks_metadata_list = metadata_in_list[0]
+            chunks_in_list = retrieved_chunks["documents"]
+            if len(ids_in_list) < 1:
+                ids_list = retrieved_chunks["ids"]
+                chunks_in_list = retrieved_chunks["documents"]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list
+            else:
+                ids_list = ids_in_list[0]
+                chunks_list = chunks_in_list[0]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list[0]
+            startround = -1
+            for item in ids_list:
+                nextround = startround + 1
+                startround = nextround
+                id = item
+                item_doc = chunks_list[startround]
+                item_list = id.split("-")
+                item_suffix = item_list[-1]
+                item_part = str("-part-" + item_suffix)
+                photo_id = id.replace(item_part, "")
+                doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+                all_chunks.append(doc)
+                chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"NAMESMENTIONED": names_wanted})
-            metadata_in_list = retrieved_chunks["metadatas"]
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, n_results=n_results, where={"NAMESMENTIONED": names_wanted})
+            ids_in_list = retrieved_chunks["ids"]
+            chunks_in_list = retrieved_chunks["documents"]
+            if len(ids_in_list) < 1:
+                ids_list = retrieved_chunks["ids"]
+                chunks_in_list = retrieved_chunks["documents"]
+                metadata_in_list = retrieved_chunks["metadatas"]
+            else:
+                ids_list = ids_in_list[0]
+                chunks_list = chunks_in_list[0]
+                metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
+            startround = -1
+            for item in ids_list:
+                nextround = startround + 1
+                startround = nextround
+                id = item
+                item_doc = chunks_list[startround]
+                item_list = id.split("-")
+                item_suffix = item_list[-1]
+                item_part = str("-part-" + item_suffix)
+                photo_id = id.replace(item_part, "")
+                doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+                all_chunks.append(doc)
+                chunks_metadata_list = metadata_in_list[0]
     elif countries_wanted != "no__country__given":
         if sub_collection != "no__subcollection__given":
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
-            metadata_in_list = retrieved_chunks["metadatas"]
-            chunks_metadata_list = metadata_in_list[0]
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, n_results=n_results, where={"COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
+            ids_in_list = retrieved_chunks["ids"]
+            chunks_in_list = retrieved_chunks["documents"]
+            if len(ids_in_list) < 1:
+                ids_list = retrieved_chunks["ids"]
+                chunks_in_list = retrieved_chunks["documents"]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list
+            else:
+                ids_list = ids_in_list[0]
+                chunks_list = chunks_in_list[0]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list[0]
+            startround = -1
+            for item in ids_list:
+                nextround = startround + 1
+                startround = nextround
+                id = item
+                item_doc = chunks_list[startround]
+                item_list = id.split("-")
+                item_suffix = item_list[-1]
+                item_part = str("-part-" + item_suffix)
+                photo_id = id.replace(item_part, "")
+                doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+                all_chunks.append(doc)
+                chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"COUNTRIESMENTIONED": countries_wanted})
-            metadata_in_list = retrieved_chunks["metadatas"]
-            chunks_metadata_list = metadata_in_list[0]
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, n_results=n_results, where={"COUNTRIESMENTIONED": countries_wanted})
+            ids_in_list = retrieved_chunks["ids"]
+            chunks_in_list = retrieved_chunks["documents"]
+            if len(ids_in_list) < 1:
+                ids_list = retrieved_chunks["ids"]
+                chunks_in_list = retrieved_chunks["documents"]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list
+            else:
+                ids_list = ids_in_list[0]
+                chunks_list = chunks_in_list[0]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list[0]
+            startround = -1
+            for item in ids_list:
+                nextround = startround + 1
+                startround = nextround
+                id = item
+                item_doc = chunks_list[startround]
+                item_list = id.split("-")
+                item_suffix = item_list[-1]
+                item_part = str("-part-" + item_suffix)
+                photo_id = id.replace(item_part, "")
+                doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+                all_chunks.append(doc)
     elif names_wanted != "no__name__given" and countries_wanted != "no__countries__wanted":
         if sub_collection != "no__subcollection__given":
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
-            metadata_in_list = retrieved_chunks["metadatas"]
-            chunks_metadata_list = metadata_in_list[0]
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, n_results=n_results, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted, "SUBCOLLECTION": sub_collection})
+            ids_in_list = retrieved_chunks["ids"]
+            chunks_in_list = retrieved_chunks["documents"]
+            if len(ids_in_list) < 1:
+                ids_list = retrieved_chunks["ids"]
+                chunks_in_list = retrieved_chunks["documents"]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list
+            else:
+                ids_list = ids_in_list[0]
+                chunks_list = chunks_in_list[0]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list[0]
+            startround = -1
+            for item in ids_list:
+                nextround = startround + 1
+                startround = nextround
+                id = item
+                item_doc = chunks_list[startround]
+                item_list = id.split("-")
+                item_suffix = item_list[-1]
+                item_part = str("-part-" + item_suffix)
+                photo_id = id.replace(item_part, "")
+                doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+                all_chunks.append(doc)
+                chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted})
-            metadata_in_list = retrieved_chunks["metadatas"]
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, n_results=n_results, where={"NAMESMENTIONED": names_wanted, "COUNTRIESMENTIONED": countries_wanted})
+            ids_in_list = retrieved_chunks["ids"]
+            chunks_in_list = retrieved_chunks["documents"]
+            if len(ids_in_list) < 1:
+                ids_list = retrieved_chunks["ids"]
+                chunks_in_list = retrieved_chunks["documents"]
+                metadata_in_list = retrieved_chunks["metadatas"]
+            else:
+                ids_list = ids_in_list[0]
+                chunks_list = chunks_in_list[0]
+                metadata_in_list = retrieved_chunks["metadatas"]
             chunks_metadata_list = metadata_in_list[0]
+            startround = -1
+            for item in ids_list:
+                nextround = startround + 1
+                startround = nextround
+                id = item
+                item_doc = chunks_list[startround]
+                item_list = id.split("-")
+                item_suffix = item_list[-1]
+                item_part = str("-part-" + item_suffix)
+                photo_id = id.replace(item_part, "")
+                doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+                all_chunks.append(doc)
+                chunks_metadata_list = metadata_in_list[0]
     else:
         if sub_collection != "no__subcollection__given":
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results, where={"SUBCOLLECTION": sub_collection})
-            metadata_in_list = retrieved_chunks["metadatas"]
-            chunks_metadata_list = metadata_in_list[0]
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, n_results=n_results, where={"SUBCOLLECTION": sub_collection})
+            ids_in_list = retrieved_chunks["ids"]
+            chunks_in_list = retrieved_chunks["documents"]
+            if len(ids_in_list) < 1:
+                ids_list = retrieved_chunks["ids"]
+                chunks_in_list = retrieved_chunks["documents"]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list
+            else:
+                ids_list = ids_in_list[0]
+                chunks_list = chunks_in_list[0]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list[0]
+            startround = -1
+            for item in ids_list:
+                nextround = startround + 1
+                startround = nextround
+                id = item
+                item_doc = chunks_list[startround]
+                item_list = id.split("-")
+                item_suffix = item_list[-1]
+                item_part = str("-part-" + item_suffix)
+                photo_id = id.replace(item_part, "")
+                doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+                all_chunks.append(doc)
+                chunks_metadata_list = metadata_in_list[0]
         else:
-            retrieved_chunks = collection.query(query_embeddings=query_embeddings, include=["metadatas"], n_results=n_results,)
-            metadata_in_list = retrieved_chunks["metadatas"]
-            chunks_metadata_list = metadata_in_list[0]
-
+            retrieved_chunks = collection.query(query_embeddings=query_embeddings, n_results=n_results)
+            ids_in_list = retrieved_chunks["ids"]
+            chunks_in_list = retrieved_chunks["documents"]
+            if len(ids_in_list) < 1:
+                ids_list = retrieved_chunks["ids"]
+                chunks_in_list = retrieved_chunks["documents"]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list
+            else:
+                ids_list = ids_in_list[0]
+                chunks_list = chunks_in_list[0]
+                metadata_in_list = retrieved_chunks["metadatas"]
+                chunks_metadata_list = metadata_in_list[0]
+            startround = -1
+            for item in ids_list:
+                nextround = startround + 1
+                startround = nextround
+                id = item
+                item_doc = chunks_list[startround]
+                item_list = id.split("-")
+                item_suffix = item_list[-1]
+                item_part = str("-part-" + item_suffix)
+                photo_id = id.replace(item_part, "")
+                doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+                all_chunks.append(doc)
+                chunks_metadata_list = metadata_in_list[0]
 
     for item in chunks_metadata_list:
         all_metadatas.append(item)
 
+    for item in chunks_in_list:
+        all_chunks.append(item)
+
     #second step uses the user_term as a search term to find more matching chunks
     retrieved_documents = collection.get(ids=[], where_document={"$contains":user_term_1})
-    metadata_in_list = retrieved_documents["metadatas"]
+    if len(ids_in_list) < 1:
+        ids_list = retrieved_documents["ids"]
+        metadata_in_list = retrieved_documents["metadatas"]
+    else:
+        ids_list = ids_in_list[0]
+        chunks_list = chunks_in_list[0]
+        metadata_in_list = retrieved_documents["metadatas"]
+    startround = -1
+    for item in ids_list:
+        nextround = startround + 1
+        startround = nextround
+        id = str(item)
+        item_doc = chunks_list[startround]
+        item_list = id.split("-")
+        item_suffix = item_list[-1]
+        item_part = str("-part-" + item_suffix)
+        photo_id = id.replace(item_part, "")
+        doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
+        all_chunks.append(doc)
+
     retrieved_docs_metadata_list = metadata_in_list
     for item in retrieved_docs_metadata_list:
         all_metadatas.append(item)
-    uniquephotos = list_metadata(all_metadatas, metadata_key)
-    #print(uniquephotos)
-    #return uniquephotos, user_term_1, names_wanted, countries_wanted
-    return uniquephotos
+    if len(all_metadatas) < 1:
+        uniquephotos = []
+    else:
+        uniquephotos = list_metadata(all_metadatas, metadata_key)
+    return uniquephotos, all_chunks
 
 
 
 #get ranked documents allows users to narrow down a retrived set of documents, to better fit context window low RAM situations
 def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key):
     client = chromadb.PersistentClient(path="chromadb/phototextvectors")
+    embed_model = quick_embed_model
     if "temp_collection" in [c.name for c in client.list_collections()]:
         client.delete_collection(name="temp_collection")
         retrieved_documents = []
@@ -376,24 +607,10 @@ def get_ranked_documents(query_documents, general_prompt, query_chunk_length, ra
     metadata_in_list = ranked_chunks["metadatas"]
     chunks_metadata_list = metadata_in_list[0]
     all_metadatas = []
-    ranked_docs = []
     for item in chunks_metadata_list:
         all_metadatas.append(item)
     uniquephotos = list_metadata(all_metadatas, metadata_key)
     ranked_docs, copyright_notice = get_documents(uniquephotos, file_path)
-    #print(ranked_docs)
-
-    #chunks_in_list = ranked_chunks["documents"]
-    #chunks_chunks_list = chunks_in_list[0]
-
-    #print(chunks_metadata_list)
-    #print(chunks_chunks_list)
-    #for i in chunks_metadata_list:
-        #chunk_index = chunks_metadata_list.index(i)
-        #chunk_text = chunks_chunks_list[chunk_index]
-        #chunk_image_ref = i["UNIQUEPHOTO"]
-        #ranked_doc = {"UNIQUEPHOTO": chunk_image_ref, "PHOTOTEXT": chunk_text}
-        #ranked_docs.append(ranked_doc)
     client.delete_collection(name="temp_collection")
     return ranked_docs, uniquephotos
 
@@ -413,6 +630,17 @@ def get_documents(uniquephotos, file_path):
             #else:
                 #print("This item reference is not in the database. Please check the reference")
     #print(query_documents)
+    for i in query_documents:
+        phototext = i["PHOTOTEXT"]
+        text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s',' ', phototext)
+        text = re.sub('\\s[U][S]', '%@%@%', text)
+        text = re.sub('[U][K]', '@%@%@', text)
+        text = re.sub('\\s[A-Z][A-Z]\\s', ' ', text)
+        text = re.sub('%@%@%', 'US ', text)
+        phototext = re.sub('@%@%@', 'UK ', text)
+        i["PHOTOTEXT"] = phototext
+
+
     return query_documents, copyright_notice
 
 def get_cited_documents(desired_quote, file_path):
@@ -424,8 +652,6 @@ def get_cited_documents(desired_quote, file_path):
         all_metadatas.append(item)
     uniquephotos = list_metadata(all_metadatas, metadata_key)
     query_documents = get_documents(uniquephotos, file_path)
-    # print(uniquephotos)
-    # return uniquephotos, user_term_1, names_wanted, countries_wanted
     return query_documents
 
 def get_desired_doc(file_path):
@@ -438,13 +664,6 @@ def get_desired_doc(file_path):
     print("\nHere is the full text of document " + desired_doc + "\n--")
     print(doc_text)
     print("--\n")
-    cited_information = input("Does this document contain the information cited in the AI summary? Type y or n: ")
-    while cited_information == "n":
-        desired_quote = input("Paste a distinctive quote from the passage here, and we can search for it: ")
-        cited_doc = get_cited_documents(desired_quote, file_path)
-        print(cited_doc)
-        cited_information = input("Would you like to search again for the cited information? Type y or n: ")
-    view_website = "n"
     view_website = input("Would you like to open the website of this document? Type y or n: ")
     if view_website == "y":
         open_url = open_website(view_doc, file_path)
@@ -477,12 +696,6 @@ def open_website(uniquephotos, file_path):
             for item in uniquephotos:
                 if row["UNIQUEPHOTO"] == item:
                     open_url = str(url)
-                    #query_document = {"UNIQUEPHOTO": uniquephoto, "PHOTOTEXT": phototext}
-                    #query_documents.append(query_document)
-                #else:
-                    #print("This item reference is not in the database. Please check the reference")
-        # print(query_documents)
-
         return open_url
 def get_namesmentioned(uniquephotos):
   with (open(file_path, newline="") as csv_file):
@@ -505,6 +718,7 @@ def response_generation(data,prompt,inference_model):
     output = ollama.generate(
         model=inference_model,
         prompt=f"<|user|>\nUsing this data: {data}. Respond to this prompt: {prompt}<|end|\n<|assistant|>"
+        #gemma prompt=f"<start_of_turn>user\nUsing this data: {data}. Respond to this prompt: {prompt}<end_of_turn>\n"
     )
     conv_context = output["response"]
     return conv_context
@@ -549,7 +763,7 @@ def chunker (phototext,chunk_length):
     # Initialize the clusters lengths list and final texts list
     clusters_lens = []
     final_texts = []
-    text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s', ' ', phototext)
+    text = phototext
 
     # If the cosine similarity is less than a specified threshold, a new cluster begins.
     threshold = 0.3
@@ -598,9 +812,6 @@ def chunker (phototext,chunk_length):
     avg_cluster_len = int(average_elements(clusters_lens))
     number_of_clusters = int(len(final_texts))
     total_chars = avg_cluster_len * number_of_clusters
-    #print(final_texts)
-    #print(clusters_lens)
-    #print("There are "+str(total_chars)+" characters split into " + str(number_of_clusters) + " clusters in this PHOTOTEXT, averaging "+str(avg_cluster_len)+" characters per cluster.")
 
     return final_texts
 
@@ -622,6 +833,7 @@ def get_folder(folder_contents):
         return sorted_query_documents
 
 def get_general_prompt(file_path):
+    print("\n")
     initial_prompt = input("AI-Assistant: What is the general topic you want to know about? \nUser: ")
     general_prompt = ("Represent this sentence for searching relevant passages: "+initial_prompt)
     user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here. \nUser: ")
@@ -634,13 +846,11 @@ def get_general_prompt(file_path):
     sub_collection = sub_collection.lower()
     #embed the query and find matching chunks
     query_embeddings = ollama_ef(general_prompt)
-    #uniquephotos, user_term_1, names_wanted, countries_wanted = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted, sub_collection)
-    uniquephotos = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted, sub_collection)
+    uniquephotos, all_chunks = retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wanted, sub_collection)
 
     print(uniquephotos)
     number_retrieved = len(uniquephotos)
     print("The " + str(number_retrieved) + " documents listed above have content matching your query.\n If no documents are listed, please enter a different query term below.\n")
-    print("If more than "+str(int(ranked_results/context_limiter))+" documents are listed, \nthe AI-Assistant will re-read them and retrieve only the most relevant documents.\n You may wish to enter a new query to retrieve a smaller number of documents.\n")
 
     see_names = input("Would you like to see the names associated with these documents? y or n: ")
     if see_names == "y":
@@ -658,7 +868,7 @@ def get_general_prompt(file_path):
 
 
     all_query_documents, copyright_notice = get_documents(uniquephotos, file_path)
-    return number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos
+    return number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks
 
 # Here is where the main program starts
 
@@ -679,7 +889,7 @@ while userresponse != "q":
         os.system("ollama run " + inference_model)
 
     #retrieve full document texts from CSV and string them together into a list of strings that can be entered into LLM context window
-    number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos = get_general_prompt(file_path)
+    number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks = get_general_prompt(file_path)
 
     view_docs = input("Would you like to view all the documents matching your general query? Type: y or n: ")
     if view_docs != "n":
@@ -689,23 +899,24 @@ while userresponse != "q":
         print("See the retrieved documents above. \nNow enter a more specific question below or enter a new query.")
     else:
         print("Great. Now enter a more specific question below or enter a new query.")
-
+    print("If more than " + str(int(ranked_results / context_limiter)) + " documents are listed, \nthe AI-Assistant will re-read them and retrieve only the most relevant documents.\n You may wish to enter a new query to retrieve a smaller number of documents.\n")
     redo_general_prompt = input("\nWould you like to enter a different query? Type: y or n: ")
 
 
 #this inner loop allows the user to request a different set of documents
     while redo_general_prompt == "y":
-        number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos = get_general_prompt(file_path)
+        number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks = get_general_prompt(file_path)
 
         view_docs = input("\nWould you like to view all the documents matching your general query? Type: y or n: ")
         if view_docs != "n":
-            print("\n--")
+            print("View the full set of documents matching your query below: \n--")
             print(all_query_documents)
             print("--\n")
             print("See the retrieved documents above.")
             print("You can choose to input a new query term below, by typing y or query this set of documents by typing n below.")
         else:
             print("You can choose to input a new query term below, by typing y or query this set of documents by typing n below.")
+        print("\nIf more than " + str(int(ranked_results / context_limiter)) + " documents are listed, \nthe AI-Assistant will re-read them and retrieve only the most relevant documents.\n You may wish to enter a new query to retrieve a smaller number of documents.\n")
         redo_general_prompt = input("Would you like to enter a different query term? Type: y or n: ")
 
     userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
@@ -760,12 +971,15 @@ while userresponse != "q":
         archive_url = str("For more information search for the archives of " + desired_collection)
 
     conv_context = "response"
-    prompt = first_query()
+    prompt = first_query(desired_collection)
 
     if number_retrieved > int(ranked_results/context_limiter):
-        query_documents, uniquephotos = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
+        #query_documents, uniquephotos = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
+        query_documents = all_chunks
+        #print(query_documents)
     else:
         query_documents = all_query_documents
+        #query_documents = all_chunks
 
     #print(query_documents)
     conv_context = response_generation(query_documents, prompt, inference_model)
@@ -800,8 +1014,6 @@ while userresponse != "q":
         folder_docs = query_documents
         print("We'll continue asking questions of the originally retrieved documents.\n")
 
-    #print(conv_continue)
-
     userresponse = input("If you would like to exit the program here, press q: \n or press c to continue.  ")
     if userresponse == "q":
         print("")
@@ -826,7 +1038,7 @@ while userresponse != "q":
         query_documents = folder_docs
         view_docs = input("Would you like to view all the documents matching your general query? Type: y or n: ")
         if view_docs == "y":
-            print("\nHere is the full text of document " + desired_doc + "\n--")
+            print("\nHere is the full text of documents matching your query: \n--")
             print(query_documents)
             print("--\n")
             print("See the full set of retrieved documents above.")
@@ -837,7 +1049,7 @@ while userresponse != "q":
                 view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
         else:
             print("Great. Now enter a new question below")
-        prompt = topic_query()
+        prompt = topic_query(desired_collection)
         conv_context = response_generation(query_documents, prompt, inference_model)
         print("\nHere is the AI-Assistant's summary of relevant material from the documents: \n--")
         print(conv_context)
@@ -880,34 +1092,3 @@ print("")
 gc.collect()
 exit()
 
-
-
-def create_large_model_template ():
-    #os.system("ollama pull phi3:14b-medium-128k-instruct-q5_K_M")
-    with open("model-template.txt", "w") as file:
-        file.write("""FROM phi3:3.8b-mini-128k-instruct-q5_K_M
-TEMPLATE "{{ if .System }}<|system|>
-{{ .System }}<|end|>
-{{ end }}{{ if .Prompt }}<|user|>
-{{ .Prompt }}<|end|>
-{{ end }}<|assistant|>
-{{ .Response }}<|end|>"
-PARAMETER stop <|end|>
-PARAMETER stop <|user|>
-PARAMETER stop <|assistant|>
-PARAMETER num_ctx 16384
-PARAMETER repeat_last_n 2048""")
-
-if os.path.exists("model-template.txt"):
-    os.remove("model-template.txt")
-    create_large_model_template()
-    inference_model_window = "16k tokens"
-    os.system("ollama create phi3-16k -f model-template.txt")
-    os.system("ollama show --modelfile phi3-16k")
-else:
-    create_large_model_template()
-    inference_model_window = "16k tokens"
-    os.system("ollama create phi3-16k -f model-template.txt")
-    os.system("ollama show --modelfile phi3-16k")
-
-os.remove("model-template.txt")
