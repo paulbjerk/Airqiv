@@ -35,8 +35,10 @@ print("                        - - :-) - -         \n")
 hnsw_space = "ip"
 #embed_model = "mxbai-embed-large:latest"
 embed_model = "snowflake-arctic-embed:latest"
+#embed_model = "rjmalagon/gte-qwen2-1.5b-instruct-embed-f16:latest"
 nlp = spacy.load('en_core_web_sm')
 embed_model_dimensions = "1024"
+#embed_model_dimensions = "1536"
 embed_model_layers = "24"
 #embed_model = "snowflake-arctic-embed:335m"
 #To improve performance see scripts for snowflake model at https://huggingface.co/Snowflake/snowflake-arctic-embed-l
@@ -50,7 +52,7 @@ metadatas = []
 ids = []
 clean_list =[]
 doc_chunks = []
-chunk_length = 150
+chunk_length = 50
 archive_collection = ""
 topic_collection = ""
 sub_collecction = ""
@@ -188,8 +190,8 @@ def chunker (phototext,chunk_length):
     # Initialize the clusters lengths list and final texts list
     clusters_lens = []
     final_texts = []
-    text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s', ' ', phototext)
-
+    #text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s', ' ', phototext)
+    text=phototext
     # If the cosine similarity is less than a specified threshold, a new cluster begins.
     threshold = 0.3
 
@@ -215,8 +217,8 @@ def chunker (phototext,chunk_length):
             continue
 
         # Check if the cluster is too long
-        elif cluster_len > 1000:
-            threshold = 0.4
+        elif cluster_len > 2000:
+            threshold = 0.5
             sents_div, vecs_div = process(cluster_txt)
             reclusters = cluster_text(sents_div, vecs_div, threshold)
 
@@ -224,7 +226,7 @@ def chunker (phototext,chunk_length):
                 div_txt = clean_text(' '.join([sents_div[i].text for i in subcluster]))
                 div_len = len(div_txt)
 
-                if div_len < chunk_length or div_len > 1000:
+                if div_len < chunk_length or div_len > 2000:
                     continue
 
                 clusters_lens.append(div_len)
@@ -265,6 +267,8 @@ def get_documents(file_path):
             uniquephoto = row["UNIQUEPHOTO"]
             foldername = row["FOLDERNAME"]
             phototext = row["PHOTOTEXT"]
+            text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s', ' ',phototext)
+            phototext = text
             namesmentioned = str(row["NAMESMENTIONED"])
             countriesmentioned = str(row["COUNTRIESMENTIONED"])
             #url = str(row["URL"])
@@ -469,7 +473,16 @@ else:
                     os.system("mv "+ingest_folder+"/"+i+" "+i)
                     print(i+" has already been ingested. Please delete the collection and relevant lines in CSV files.")
                 else:
-                    ingest_csv(currentingest, archive_collection, topic_collection)
+                    #valid_oh = "y"
+                    oh_split = currentingest.split("_")
+                    oh_last_term = oh_split[-1]
+                    print(oh_last_term)
+                    match = re.search("[O][H][0-9]{4}", oh_last_term)
+                    if match:
+                        os.system("mv " + ingest_folder + "/" + i + " ttuva-error-log/" + i)
+                        print(i + " has no content and needs to be re-obtained.")
+                    else:
+                        ingest_csv(currentingest, archive_collection, topic_collection)
     gc.collect()
 
 
