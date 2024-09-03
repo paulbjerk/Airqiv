@@ -33,13 +33,13 @@ nlp = spacy.load('en_core_web_sm')
 embed_model_short, embed_model_detail = embed_model.split(":")
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
-#inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
+inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
 #inference_model_short, inference_model_detail = inference_model.split(":")
-#inference_model_author = "Microsoft"
-inference_model_author = "Google"
+inference_model_author = "Microsoft"
+#inference_model_author = "Google"
 #phi3_model = "2k"
-inference_model_window = "8k tokens"
-inference_model = "gemma-8k:latest"
+inference_model_window = "2k tokens"
+#inference_model = "gemma-8k:latest"
 #inference_model = "phi3-14b-12k:latest"
 #inference_model_short, inference_model_detail = inference_model.split(":")
 #inference_model_author = "Meta"
@@ -74,8 +74,8 @@ general_prompt = "What is the main theme in these documents?"
 open_url = ""
 archive_name =""
 archive_url = ""
-n_results = 30
-ranked_results = 8
+n_results = 4
+ranked_results = 12
 context_limiter = 4
 
 # a higher context limiter number makes it more likely that the retrieved documents will be chunked and ranked rather than fed in their entirety into the LLM context.
@@ -85,36 +85,36 @@ context_limiter = 4
 
 
 ollama_models = os.popen("ollama list").read()
-if "phi3-14b-12k" in ollama_models and "phi3-16k" in ollama_models and "phi3-8k" in ollama_models:
-    print("There are two language models available, which one do you want to use?")
-    model_choice = input("For the larger, but slower phi3-14b-12k, type 1: \nFor the smaller but faster phi3-16k, type 2:\n For the smaller model with a smaller context, type 3\nEnter number here: ")
+if "phi3-14b-8k:latest" in ollama_models and "phi3-3b-16k:latest" in ollama_models and "phi3-3b-8k:latest" in ollama_models:
+    print("There are three language models available, which one do you want to use?")
+    model_choice = input("1. For the larger, but slower phi3-14b-8k, type 1: \n2. For the smaller but faster 3.8b phi3-3b-16k model, type 2:\n3. For the smaller 3.8b phi3-3b-8k model, type 3\nEnter number here: ")
     if model_choice == "1":
-        inference_model = "phi3-14b-12k:latest"
-        inference_model_window = "12k tokens"
-        n_results = 20
-        ranked_results = 100
+        inference_model = "phi3-14b-8k:latest"
+        inference_model_window = "8k tokens"
+        n_results = 14
+        ranked_results = 60
     elif model_choice == "2":
-        inference_model = "phi3-16k:latest"
+        inference_model = "phi3-3b-16k:latest"
         inference_model_window = "16k tokens"
         n_results = 30
         ranked_results = 120
     else:
-        inference_model = "phi3-8k:latest"
+        inference_model = "phi3-3b-8k:latest"
         inference_model_window = "8k tokens"
         n_results = 14
         ranked_results = 60
-elif "phi3-2k" in ollama_models:
-    inference_model = "phi3-2k:latest"
+elif "phi3-3b-2k" in ollama_models:
+    inference_model = "phi3-3b-2k:latest"
     inference_model_window = "2k tokens"
     n_results = 4
     ranked_results = 12
-elif "phi3-4k" in ollama_models:
-    inference_model = "phi3-4k:latest"
+elif "phi3-3b-4k" in ollama_models:
+    inference_model = "phi3-3b-4k:latest"
     inference_model_window = "4k tokens"
     n_results = 15
     ranked_results = 30
-elif "phi3-8k" in ollama_models:
-    inference_model = "phi3-8k:latest"
+elif "phi3-3b-8k" in ollama_models:
+    inference_model = "phi3-3b-8k:latest"
     inference_model_window = "8k tokens"
     n_results = 14
     ranked_results = 60
@@ -123,13 +123,13 @@ elif "phi3-14b-12k" in ollama_models:
     inference_model_window = "12k tokens"
     n_results = 20
     ranked_results = 100
-elif "phi3-16k" in ollama_models:
-    inference_model = "phi3-16k:latest"
+elif "phi3-3b-16k" in ollama_models:
+    inference_model = "phi3-3b-16k:latest"
     inference_model_window = "16k tokens"
     n_results = 30
     ranked_results = 120
-elif "phi3-12k" in ollama_models:
-    inference_model = "phi3-12k:latest"
+elif "phi3-3b-12k" in ollama_models:
+    inference_model = "phi3-3b-12k:latest"
     inference_model_window = "12k tokens"
     n_results = 20
     ranked_results = 100
@@ -328,10 +328,16 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
                 nextround = startround + 1
                 startround = nextround
                 id = item
+                #print(id)
+                # id = ids_in_list[0][startround]
+                # item_index = ids_list.index(nextround)
                 item_doc = chunks_list[startround]
                 item_list = id.split("-")
+                # print(item_list)
                 item_suffix = item_list[-1]
+                #print(item_suffix)
                 item_part = str("-part-" + item_suffix)
+                # print(item_part)
                 photo_id = id.replace(item_part, "")
                 doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
                 all_chunks.append(doc)
@@ -357,10 +363,16 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
                 nextround = startround + 1
                 startround = nextround
                 id = item
+                #print(id)
+                # id = ids_in_list[0][startround]
+                # item_index = ids_list.index(nextround)
                 item_doc = chunks_list[startround]
                 item_list = id.split("-")
+                # print(item_list)
                 item_suffix = item_list[-1]
+                #print(item_suffix)
                 item_part = str("-part-" + item_suffix)
+                # print(item_part)
                 photo_id = id.replace(item_part, "")
                 doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
                 all_chunks.append(doc)
@@ -386,10 +398,16 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
                 nextround = startround + 1
                 startround = nextround
                 id = item
+                #print(id)
+                # id = ids_in_list[0][startround]
+                # item_index = ids_list.index(nextround)
                 item_doc = chunks_list[startround]
                 item_list = id.split("-")
+                # print(item_list)
                 item_suffix = item_list[-1]
+                #print(item_suffix)
                 item_part = str("-part-" + item_suffix)
+                # print(item_part)
                 photo_id = id.replace(item_part, "")
                 doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
                 all_chunks.append(doc)
@@ -414,10 +432,16 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
                 nextround = startround + 1
                 startround = nextround
                 id = item
+                #print(id)
+                # id = ids_in_list[0][startround]
+                # item_index = ids_list.index(nextround)
                 item_doc = chunks_list[startround]
                 item_list = id.split("-")
+                # print(item_list)
                 item_suffix = item_list[-1]
+                #print(item_suffix)
                 item_part = str("-part-" + item_suffix)
+                # print(item_part)
                 photo_id = id.replace(item_part, "")
                 doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
                 all_chunks.append(doc)
@@ -442,10 +466,16 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
                 nextround = startround + 1
                 startround = nextround
                 id = item
+                #print(id)
+                # id = ids_in_list[0][startround]
+                # item_index = ids_list.index(nextround)
                 item_doc = chunks_list[startround]
                 item_list = id.split("-")
+                # print(item_list)
                 item_suffix = item_list[-1]
+                #print(item_suffix)
                 item_part = str("-part-" + item_suffix)
+                # print(item_part)
                 photo_id = id.replace(item_part, "")
                 doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
                 all_chunks.append(doc)
@@ -469,10 +499,16 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
                 nextround = startround + 1
                 startround = nextround
                 id = item
+                #print(id)
+                # id = ids_in_list[0][startround]
+                # item_index = ids_list.index(nextround)
                 item_doc = chunks_list[startround]
                 item_list = id.split("-")
+                # print(item_list)
                 item_suffix = item_list[-1]
+                #print(item_suffix)
                 item_part = str("-part-" + item_suffix)
+                # print(item_part)
                 photo_id = id.replace(item_part, "")
                 doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
                 all_chunks.append(doc)
@@ -498,10 +534,16 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
                 nextround = startround + 1
                 startround = nextround
                 id = item
+                #print(id)
+                # id = ids_in_list[0][startround]
+                # item_index = ids_list.index(nextround)
                 item_doc = chunks_list[startround]
                 item_list = id.split("-")
+                # print(item_list)
                 item_suffix = item_list[-1]
+                #print(item_suffix)
                 item_part = str("-part-" + item_suffix)
+                # print(item_part)
                 photo_id = id.replace(item_part, "")
                 doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
                 all_chunks.append(doc)
@@ -526,10 +568,16 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
                 nextround = startround + 1
                 startround = nextround
                 id = item
+                #print(id)
+                # id = ids_in_list[0][startround]
+                # item_index = ids_list.index(nextround)
                 item_doc = chunks_list[startround]
                 item_list = id.split("-")
+                # print(item_list)
                 item_suffix = item_list[-1]
+                #print(item_suffix)
                 item_part = str("-part-" + item_suffix)
+                # print(item_part)
                 photo_id = id.replace(item_part, "")
                 doc = {"UNIQUEPHOTO": photo_id, "PHOTOTEXT": item_doc}
                 all_chunks.append(doc)
@@ -674,7 +722,7 @@ def get_documents(uniquephotos, file_path):
         phototext = i["PHOTOTEXT"]
         text = re.sub('\\s[3][01]\\s|\\s[.][3][01]\\s|[.]\\s[12][0-9]\\s|\\s[12][0-9]\\s|\\s[1-9]\\s|[.]\\s[1-9]\\s',' ', phototext)
         text = re.sub('\\s[U][S]', '%@%@%', text)
-        text = re.sub('[U][K]', '@%@%@', text)
+        text = re.sub('\\s[U][K]', '@%@%@', text)
         text = re.sub('\\s[A-Z][A-Z]\\s', ' ', text)
         text = re.sub('%@%@%', 'US ', text)
         phototext = re.sub('@%@%@', 'UK ', text)
@@ -1033,6 +1081,9 @@ while userresponse != "q":
     elif desired_collection == "ttuva":
         archive_name = "The Vietnam Archive at Texas Tech University"
         archive_url = "vva.vietnam.ttu.edu"
+    elif desired_collection == "ttuop":
+        archive_name = "The Operating Policies & Procedures of Texas Tech University"
+        archive_url = "depts.ttu.edu/opmanual/"
     else:
         archive_name = desired_collection
         archive_url = str("For more information search for the archives of " + desired_collection)
@@ -1041,6 +1092,7 @@ while userresponse != "q":
     prompt = first_query(desired_collection)
     #upper_limit = int(5*(ranked_results/context_limiter))
 
+    #this step selects whether to use the full text of the returned documents or just the top returned chunks a the context for the LLM query
     if number_retrieved > int(ranked_results/context_limiter):
         #query_documents, uniquephotos = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
         query_documents = all_chunks[:ranked_results]
@@ -1049,6 +1101,7 @@ while userresponse != "q":
         query_documents = all_query_documents
         #query_documents = all_chunks
 
+    #This prints out the LLM response to the user query and offers the user the chance to view original text of cited documents
     #print(query_documents)
     conv_context = response_generation(query_documents, prompt, inference_model)
     print("\nHere is the AI-Assistant's summary of relevant material from the documents: \n--")
@@ -1061,6 +1114,7 @@ while userresponse != "q":
         get_desired_doc(file_path)
         view_desired_doc = input("Would you like to view another of the referenced documents? y/n: ")
 
+    #this allows the user to view all documents in the folder...generally not a wise thing to request as it will return too much data
     view_folder = input("Would you like to retrieve all documents in this folder? Type y or n: ")
     folder_contents = []
     if view_folder == "y":
@@ -1074,6 +1128,7 @@ while userresponse != "q":
         print("See contents of folder above. There are " + str(folder_length) + " pages in this folder.\n")
         conv_continue = input("\nWould you like to ask questions about the contents of this folder? y/n: ")
 
+        #this would be better to do as the above limiter, as this version requires a time-consuming new vectorization of the retrieved materials
         if folder_length > ranked_results / context_limiter:
             folder_docs, uniquephotos = get_ranked_documents(folder_docs, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
         else:
@@ -1162,5 +1217,3 @@ print(copyright_notice)
 print("")
 gc.collect()
 exit()
-
-
