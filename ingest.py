@@ -115,6 +115,9 @@ def add_new_documents(file_path, collection, archive_collection, topic_collectio
         elif archive_collection == "ttuva":
             archive_name = "The Vietnam Archive at Texas Tech University"
             archive_url = "vva.vietnam.ttu.edu"
+        elif archive_collection == "ttuop":
+            archive_name = "The Operating Policies and Procedures of Texas Tech University"
+            archive_url = "https://www.depts.ttu.edu/opmanual"
         else:
             archive_name = archive_collection
             archive_url = str("For more information search for the archives of "+archive_collection)
