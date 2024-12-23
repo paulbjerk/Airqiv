@@ -24,12 +24,12 @@ print("I am grateful for the excellent chunking algorithm by Solano Todeschini, 
 print("\n The documents returned and summarized by this Document Explorer are copyright of the authors and archival custodian.\n")
 #general variables
 #embed_model = "snowflake-arctic-embed:335m"
-embed_model = "snowflake-arctic-embed:latest"
-quick_embed_model = "snowflake-arctic-embed:latest"
-embed_model_author = "Snowflake"
+#embed_model = "snowflake-arctic-embed:latest"
+#quick_embed_model = "snowflake-arctic-embed:latest"
+#embed_model_author = "Snowflake"
 nlp = spacy.load('en_core_web_sm')
-#embed_model = "mxbai-embed-large:latest"
-#embed_model_author = "Mixed Bread"
+embed_model = "mxbai-embed-large:latest"
+embed_model_author = "Mixed Bread"
 embed_model_short, embed_model_detail = embed_model.split(":")
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
@@ -65,7 +65,7 @@ query_chunk_length = 50
 currentingest = "foldertitle"
 hnsw_space = "ip"
 prompt = f"You are a history professor. Answer the following question by designating one or more documents that contain relevant information. The documents are identified by a UNIQUEPHOTO: name."
-user_question_1 = "What are the main themes in these documents?"
+initial_prompt = "What are the main themes in these documents?"
 user_term_1 = ""
 names_wanted = ""
 countries_wanted = ""
@@ -76,8 +76,7 @@ archive_name =""
 archive_url = ""
 n_results = 4
 ranked_results = 12
-context_limiter = 4
-
+context_limiter = 3
 # a higher context limiter number makes it more likely that the retrieved documents will be chunked and ranked rather than fed in their entirety into the LLM context.
 # the context limiter is a divisor to test the number of retrieved documents against the maximium context length of the LLM
 
@@ -85,7 +84,7 @@ context_limiter = 4
 
 
 ollama_models = os.popen("ollama list").read()
-if "phi3-14b-8k:latest" in ollama_models and "phi3-3b-16k:latest" in ollama_models and "phi3-3b-8k:latest" in ollama_models:
+if "phi4-14b-8k:latest" in ollama_models and "phi3-3b-16k:latest" in ollama_models and "phi3-3b-8k:latest" in ollama_models:
     print("There are three language models available, which one do you want to use?")
     model_choice = input("1. For the larger, but slower phi3-14b-8k, type 1: \n2. For the smaller but faster 3.8b phi3-3b-16k model, type 2:\n3. For the smaller 3.8b phi3-3b-8k model, type 3\nEnter number here: ")
     if model_choice == "1":
@@ -119,7 +118,7 @@ elif "phi3-3b-8k" in ollama_models:
     n_results = 14
     ranked_results = 60
 elif "phi3-14b-12k" in ollama_models:
-    inference_model = "phi3-14b-12k:latest"
+    inference_model = "phi4-14b-12k:latest"
     inference_model_window = "12k tokens"
     n_results = 20
     ranked_results = 100
@@ -134,7 +133,7 @@ elif "phi3-3b-12k" in ollama_models:
     n_results = 20
     ranked_results = 100
 elif "phi3-14b-16k" in ollama_models:
-    inference_model = "phi3-14b-16k:latest"
+    inference_model = "phi4-14b-16k:latest"
     inference_model_window = "16k tokens"
     n_results = 30
     ranked_results = 120
@@ -181,15 +180,35 @@ else:
 #functions used
 
 # first user prompt is to ask question of the initially retrieved documents
-def first_query(desired_collection):
+def first_query(archive_name, initial_prompt, sentencesneeded):
     user_question_1 = input("AI-Assistant: What do you want to know about? \nUser: ")
     sentencesneeded = input("AI-Assistant: How many sentences do you want in the answer? \nUser: ")
-    prompt = f"You are a history professor able to read documents from a collection related to "+desired_collection+" and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    if sentencesneeded == "1":
+        sentencesneeded = "one"
+    elif sentencesneeded == "2":
+        sentencesneeded = "two"
+    elif sentencesneeded == "3":
+        sentencesneeded = "three"
+    elif sentencesneeded == "4":
+        sentencesneeded = "four"
+    elif sentencesneeded == "5":
+        sentencesneeded = "five"
+    elif sentencesneeded == "6":
+        sentencesneeded = "six"
+    elif sentencesneeded == "7":
+        sentencesneeded = "seven"
+    elif sentencesneeded == "8":
+        sentencesneeded = "eight"
+    elif sentencesneeded == "9":
+        sentencesneeded = "nine"
+    prompt = f"Answer the following question by designating documents that contain relevant information \nEach document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: \nThe PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value \nPlease state the UNIQUEPHOTO: value for every statement \nThe question is " + user_question_1 + " \nPlease respond with " + sentencesneeded +" sentences "
+    #" sentences in the following form \n These documents from the "+archive_name+" indicate the following interpretation which is derived from this UNIQUEPHOTO "
+
     #"Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n"
     return prompt
 
 # topic query is used to follow up with the retrieved documents or a user-selected folder of relevant documents
-def topic_query(desired_collection):
+def topic_query(archive_name):
     user_question_1 = input("AI-Assistant: What else do you want to ask about this topic? \nUser: ")
     sentencesneeded = input("AI-Assistant: How many sentences do you want in the answer (1-9)? \nUser: ")
     if sentencesneeded == "1":
@@ -211,7 +230,7 @@ def topic_query(desired_collection):
     elif sentencesneeded == "9":
         sentencesneeded = "nine"
 
-    prompt = f"You are a history professor able to read documents from a collection related to "+desired_collection+" and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
+    prompt = f"You are a history professor able to read documents from a collection related to "+archive_name+" and answer questions with relevant information. Each document is a JSON with associated key values UNIQUEPHOTO: and PHOTOTEXT: . The PHOTOTEXT: value is the text of the document identified by the UNIQUEPHOTO: value. Please state the UNIQUEPHOTO: value for every statement. Answer the following question by designating documents that contain relevant information. Question: " + user_question_1 + "? Please respond with " + sentencesneeded + " sentences."
     #"Some documents have header material that looks like gibberish at the beginning of the document. Ignore this kind of header material.\n"
     return prompt
 
@@ -270,7 +289,7 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
     else:
         countries_wanted = countries_wanted
 
-    if user_term_1 =="":
+    if user_term_1 == "":
         user_term_1 = "no__term__given"
     elif user_term_1 == "NONE":
         user_term_1 = "no__term__given"
@@ -588,9 +607,11 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
 
     for item in chunks_in_list:
         all_chunks.append(item)
-
+    print("user_term_1 is "+user_term_1)
+    """
     #second step uses the user_term as a search term to find more matching chunks
-    retrieved_documents = collection.get(ids=[], where_document={"$contains":user_term_1})
+    retrieved_documents = collection.get(ids=[], where_document={"$contains": user_term_1})
+    #retrieved_documents = []
     #ids_in_list = retrieved_documents["ids"]
     #metadata_in_list = retrieved_documents["metadatas"]
     #chunks_in_list = retrieved_documents["documents"]
@@ -627,6 +648,7 @@ def retrieve_documents(query_embeddings, user_term_1, names_wanted, countries_wa
     retrieved_docs_metadata_list = metadata_in_list
     for item in retrieved_docs_metadata_list:
         all_metadatas.append(item)
+    """
     #for item in chunks_list:
         #all_chunks.append(item)
     if len(all_metadatas) < 1:
@@ -818,11 +840,16 @@ def get_namesmentioned(uniquephotos):
 
 # Ollama's basic query-documents function using selected LLM
 # phi3 chat template: <|user|>\nQuestion<|end|>\n<|assistant|>
-def response_generation(data,prompt,inference_model):
+def response_generation(data,prompt,inference_model,archive_name):
     #  generate a response combining the prompt and data we retrieved in step 2
+    print("Here are the documents:")
+    print(data)
+    print("End of Documents.")
+    print("Here is the prompt: "+prompt+"\n End of Prompt.")
+    print("Here is the Archive: "+archive_name)
     output = ollama.generate(
         model=inference_model,
-        prompt=f"<|user|>\nUsing this data: {data}. Respond to this prompt: {prompt}<|end|\n<|assistant|>"
+        prompt=f"<|system|> You are a history professor able to read documents from a collection related to {archive_name} and answer questions with relevant information.  <|end|>\n <|user|>\nRead these JSON documents {data} \nnow using information from the these documents respond to this prompt {prompt}<|end|>\n<|assistant|>\n<|end|>"
         #gemma prompt=f"<start_of_turn>user\nUsing this data: {data}. Respond to this prompt: {prompt}<end_of_turn>\n"
     )
     conv_context = output["response"]
@@ -950,9 +977,11 @@ def get_general_prompt(file_path):
     print("\n")
     initial_prompt = input("AI-Assistant: What is the general topic you want to know about? \nUser: ")
     general_prompt = ("Represent this sentence for searching relevant passages: "+initial_prompt)
-    user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here. \nUser: ")
+    #user_term_1 = input("To EXPAND the number of retrieved documents, please provide ONE specific term (name, organization event) relevant to your question.\n If you don't want to specify a search term, type - NONE. \n Or enter a one-word search term here. \nUser: ")
+    user_term_1 = "n"
     names_wanted = input("To LIMIT the number of retrieved documents to those authored by (or associated with) a single name, provide ONE name. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed name delimiter here. \nUser: ")
     countries_wanted = input("To LIMIT the number of retrieved documents to those associated with a single country, provide ONE country. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the full indexed country delimiter here. \nUser: ")
+    #sub_collection = "n"
     sub_collection = input("To LIMIT the number of retrieved documents to those associated with a single sub-collection (e.g oh: oral histories or RG59: NARA Record Group 59), provide ONE abbreviation. \n If you don't want to limit your retrieved documents type - NONE. \n Or enter the abbreviated sub-collection delimiter here. \nUser: ")
 
 
@@ -983,7 +1012,7 @@ def get_general_prompt(file_path):
 
 
     all_query_documents, copyright_notice = get_documents(uniquephotos, file_path)
-    return number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks
+    return number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks, initial_prompt, sentencesneeded
 
 # Here is where the main program starts
 
@@ -1004,7 +1033,7 @@ while userresponse != "q":
         os.system("ollama run " + inference_model)
 
     #retrieve full document texts from CSV and string them together into a list of strings that can be entered into LLM context window
-    number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks = get_general_prompt(file_path)
+    number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks, initial_prompt, sentencesneeded = get_general_prompt(file_path)
 
     view_docs = input("Would you like to view all the documents matching your general query? Type: y or n: ")
     if view_docs != "n":
@@ -1020,7 +1049,7 @@ while userresponse != "q":
 
 #this inner loop allows the user to request a different set of documents
     while redo_general_prompt == "y":
-        number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks = get_general_prompt(file_path)
+        number_retrieved, all_query_documents, general_prompt, copyright_notice, uniquephotos, all_chunks, initial_prompt, sentencesneeded = get_general_prompt(file_path)
 
         view_docs = input("\nWould you like to view all the documents matching your general query? Type: y or n: ")
         if view_docs != "n":
@@ -1089,21 +1118,23 @@ while userresponse != "q":
         archive_url = str("For more information search for the archives of " + desired_collection)
 
     conv_context = "response"
-    prompt = first_query(desired_collection)
+    prompt = first_query(desired_collection, initial_prompt, sentencesneeded)
     #upper_limit = int(5*(ranked_results/context_limiter))
-
+    """
     #this step selects whether to use the full text of the returned documents or just the top returned chunks a the context for the LLM query
-    if number_retrieved > int(ranked_results/context_limiter):
+    if number_retrieved >= int(ranked_results/context_limiter):
         #query_documents, uniquephotos = get_ranked_documents(all_query_documents, general_prompt, query_chunk_length, ranked_results, file_path, metadata_key)
-        query_documents = all_chunks[:ranked_results]
+        #query_documents = all_chunks[:ranked_results]
+        print("Warning: Too many documents were retrieved. Only the first "+str(n_results)+" will be queried.")
         #print(query_documents)
     else:
         query_documents = all_query_documents
         #query_documents = all_chunks
-
+    """
+    query_documents = all_query_documents
     #This prints out the LLM response to the user query and offers the user the chance to view original text of cited documents
     #print(query_documents)
-    conv_context = response_generation(query_documents, prompt, inference_model)
+    conv_context = response_generation(query_documents, prompt, inference_model, archive_name)
     print("\nHere is the AI-Assistant's summary of relevant material from the documents: \n--")
     print(conv_context)
     print("--\n")
@@ -1176,7 +1207,7 @@ while userresponse != "q":
         else:
             print("Great. Now enter a new question below")
         prompt = topic_query(desired_collection)
-        conv_context = response_generation(query_documents, prompt, inference_model)
+        conv_context = response_generation(query_documents, prompt, inference_model, archive_name)
         print("\nHere is the AI-Assistant's summary of relevant material from the documents: \n--")
         print(conv_context)
         print("--\n")
