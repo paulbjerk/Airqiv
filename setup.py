@@ -15,12 +15,17 @@ print("\n The documents returned and summarized by this Document Explorer are co
 # https://www.reddit.com/r/LangChain/comments/15a447w/chroma_or_faiss/
 # https://python.langchain.com/v0.2/docs/integrations/vectorstores/chroma/
 
-#embed_model = "mxbai-embed-large"
-embed_model = "snowflake-arctic-embed"
+
+#embed_model = "snowflake-arctic-embed"
+#embed_model_author = "Snowflake"
+embed_model = "mxbai-embed-large:latest"
+embed_model_author = "Mixed Bread"
 embed_model_dimensions = "1024"
 embed_model_layers = "24"
 #basic_inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
+# (replace all phi3:3.8b-mini-128k-instruct-q5_K_M to migrate models)
 inference_model = "phi3:3.8b-mini-128k-instruct-q5_K_M"
+#inference_model = "phi3.5:3.8b-mini-instruct-q5_K_M"
 inference_model_short, inference_model_detail = inference_model.split(":")
 userresponse = ""
 inference_model_window = ""
