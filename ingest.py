@@ -32,9 +32,10 @@ print("                     - - airqiv.com  - -       ")
 print("                        - - :-) - -         \n")
 
 # HNSW space affects the discovery of documents in chromadb
+#on HNSW space for PGVector see: https://neon.tech/blog/understanding-vector-search-and-hnsw-index-with-pgvector
 hnsw_space = "ip"
-#embed_model = "mxbai-embed-large:latest"
-embed_model = "snowflake-arctic-embed:latest"
+embed_model = "mxbai-embed-large:latest"
+#embed_model = "snowflake-arctic-embed:latest"
 #embed_model = "rjmalagon/gte-qwen2-1.5b-instruct-embed-f16:latest"
 nlp = spacy.load('en_core_web_sm')
 embed_model_dimensions = "1024"
@@ -323,6 +324,7 @@ def ingest_csv (currentingest, archive_collection, topic_collection):
     count_lines_currentingest(file_path)
 
     documents, metadatas, ids = get_documents(file_path)
+
     embeddings = ollama_ef(documents)
     #print(embeddings)
     #print(documents)
@@ -567,6 +569,6 @@ for cluster in clusters:
         final_texts.append(cluster_txt)
 
 exit()
-"""
 
+"""
 
