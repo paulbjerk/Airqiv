@@ -6,7 +6,7 @@ To use: This only works on an M-series Apple Macintosh computer (2020 or later).
 
 1. Create a folder called airqiv in your main user folder.
 2. Then download and move these four files into it: 1) setup.py 2) ingest.py 3) asst.py 4) delete_collection.py
-3. Put the nara_tanzania_RG59-67-69-Box2513-contd-2.csv (the other CSV creates an error) in the ai-assistant folder in your main user folder. You can also try using this Apple Short cut to extract text from interview transcripts of Oral Histories of Vietnam War veterans collected by the The Oral History Project of the Vietnam Center and Sam Johnson Vietnam Archive at Texas Tech University: https://www.icloud.com/shortcuts/07c846c77c0546199a2e432c83997645 This shortcut will cycle through 50 transcripts, starting from the the transcript number entered in the first step.
+3. Put the nara_tanzania_RG59-67-69-Box2513-contd-2.csv (the other CSV creates an error) in the airqiv folder in your main user folder. You can also try using this Apple Short cut to extract text from interview transcripts of Oral Histories of Vietnam War veterans collected by the The Oral History Project of the Vietnam Center and Sam Johnson Vietnam Archive at Texas Tech University: https://www.icloud.com/shortcuts/07c846c77c0546199a2e432c83997645 This shortcut will cycle through 50 transcripts, starting from the the transcript number entered in the first step.
 4. Download Ollama from ollama.com and put it in your Applications folder (you’ll need an admin password for this...I’m not sure that’s altogether necessary as the setup file also installs Ollama for the local user. Either way, you need Ollama to run this)
 5. Open the Terminal application (from the Utilities folder in your Applications folder)
 6. Type - cd airqiv
