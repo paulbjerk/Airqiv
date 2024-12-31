@@ -19,4 +19,4 @@ To use: This only works on an M-series Apple Macintosh computer (2020 or later).
 13. In Terminal type - python3 asst.py
 14. Explore the documents by typing in the lowercase archive abbreviation -  nara
 15. Follow the prompts in the asst app. They mostly work, but there are bound to be errors. Let me know if you encounter errors
-
+16. For the ingest.py process. Best to test with a single CSV first. If it crashes. Find the CSV that caused the crash (i.e. in the newly created collection folder, here, 'nara'). Move the CSV back to the main airqiv folder, then delete the collection folder (e.g. 'nara' here) as well as the chromadb folder and the newly created collections csv's (e.g. here all-nara-documents and all-tanzania-documents. Then re-run the ingest process. If it continues to crash with the single CSV, then it will need deeper problem solving. 
